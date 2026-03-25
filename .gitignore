@@ -1,0 +1,13 @@
+# UV / Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Claude Code personal config
+CLAUDE.local.md
+
+# macOS
+.DS_Store
