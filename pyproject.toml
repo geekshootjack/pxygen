@@ -1,8 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "davinci-proxy-generator"
 version = "1.5.2"
 description = "Automates proxy generation for DaVinci Resolve"
 requires-python = ">=3.9"
+
+[project.scripts]
+proxy-generator = "davinci_proxy_generator.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/davinci_proxy_generator"]
 
 [dependency-groups]
 dev = [
@@ -11,8 +21,11 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
