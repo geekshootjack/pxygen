@@ -1,34 +1,34 @@
 # ProxyPilot
 
-**Automated proxy generation for DaVinci Resolve.**
+**DaVinci Resolve 自动化代理生成工具。**
 
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![中文](https://img.shields.io/badge/文档-中文-red)](README.zh.md)
+[![English](https://img.shields.io/badge/docs-English-blue)](README.md)
 
-ProxyPilot imports your footage into DaVinci Resolve, organises it into bins that mirror your folder hierarchy, and queues proxy render jobs — all in one command.
+ProxyPilot 将素材导入 DaVinci Resolve，按照文件夹层级自动建立媒体库 bin 结构，并批量排队代理渲染任务——一条命令完成全部操作。
 
-## Features
+## 功能特性
 
-- **Two modes** — import directly from a folder tree, or re-generate missing proxies from a [File_Compare](https://github.com/UserProjekt/File_Compare) JSON
-- **Smart codec selection** — H.265 for ≤ 4 audio channels, ProRes Proxy for > 4 (Adobe Premiere compatibility)
-- **Burn-in overlays** — source clip name + timecode applied automatically; disable with `-c`
-- **Folder filtering** — process specific shooting days interactively (`--select`) or by name (`--filter`)
-- **Cross-platform** — macOS, Windows, Linux
+- **两种模式** — 直接从文件夹树导入，或基于 [File_Compare](https://github.com/UserProjekt/File_Compare) 的 JSON 结果重新生成缺失代理
+- **智能编码选择** — 音频通道 ≤ 4 用 H.265，> 4 用 ProRes Proxy（解决 Adobe Premiere 兼容性问题）
+- **烧录叠加层** — 自动叠加源片段名称与时间码；可用 `-c` 关闭
+- **文件夹筛选** — 交互式选择拍摄日（`--select`）或按名称过滤（`--filter`）
+- **跨平台支持** — macOS、Windows、Linux
 
-## Requirements
+## 环境要求
 
-- Python ≥ 3.9, **64-bit**
-- DaVinci Resolve ≥ 19.1.4 (must be running)
-- Resolve render presets: `FHD_h.265_420_8bit_5Mbps`, `FHD_prores_proxy`
-- Resolve burn-in preset: `burn-in`
+- Python ≥ 3.9，**必须是 64 位**
+- DaVinci Resolve ≥ 19.1.4（运行脚本前需保持 Resolve 开启）
+- Resolve 渲染预设：`FHD_h.265_420_8bit_5Mbps`、`FHD_prores_proxy`
+- Resolve 数据烧录预设：`burn-in`
 
-## Environment Setup
+## 环境变量配置
 
-DaVinci Resolve exposes its scripting API through environment variables. Set these before running ProxyPilot:
+DaVinci Resolve 通过环境变量暴露脚本 API，运行前需要设置：
 
 <details>
-<summary>macOS (standard install)</summary>
+<summary>macOS（标准安装）</summary>
 
 ```sh
 export RESOLVE_SCRIPT_API="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting"
@@ -38,7 +38,7 @@ export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
 </details>
 
 <details>
-<summary>macOS (App Store install)</summary>
+<summary>macOS（App Store 安装版）</summary>
 
 ```sh
 export RESOLVE_SCRIPT_API="/Applications/DaVinci Resolve Studio.app/Contents/Resources/Developer/Scripting"
@@ -67,13 +67,13 @@ export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
 ```
 </details>
 
-## Installation
+## 安装
 
 ```sh
 pip install git+https://github.com/thomjiji/ProxyPilot.git
 ```
 
-Or clone and install in editable mode:
+或克隆后以可编辑模式安装：
 
 ```sh
 git clone https://github.com/thomjiji/ProxyPilot.git
@@ -81,21 +81,21 @@ cd ProxyPilot
 pip install -e .
 ```
 
-## Quick Start
+## 快速上手
 
 ```sh
-# Directory mode — import footage and generate proxies
+# 目录模式——导入素材并生成代理
 proxy-generator -f /Volumes/SSD/Footage -p /Volumes/SSD/Proxy -i 4 -o 5
 
-# JSON mode — re-generate missing proxies from a File_Compare result
+# JSON 模式——基于 File_Compare 结果重新生成缺失代理
 proxy-generator -j comparison.json -p /Volumes/SSD/Proxy -d 1 -i 4 -o 5
 
-# Process only specific shooting days
+# 只处理特定拍摄日
 proxy-generator -f /Volumes/SSD/Footage -p /Volumes/SSD/Proxy -i 4 -o 5 \
   --filter "Shooting_Day_2,Shooting_Day_3"
 ```
 
-A typical footage layout:
+典型素材目录结构：
 
 ```
 Production/
@@ -104,13 +104,13 @@ Production/
 │   │   ├── A001_C001/
 │   │   └── B001_C001/
 │   └── Shooting_Day_2/
-└── Proxy/          ← output goes here
+└── Proxy/          ← 代理输出到这里
 ```
 
-## Documentation
+## 文档
 
-Full CLI reference, all flags, and advanced examples: **[docs/usage.md](docs/usage.md)**
+完整 CLI 参数说明与进阶用法：**[docs/usage.md](docs/usage.md)**
 
-## License
+## 许可证
 
-[MIT](LICENSE) — fork of [DaVinci_Script_Proxy_Generator](https://github.com/UserProjekt/DaVinci_Script_Proxy_Generator) by User22.
+[MIT](LICENSE) — 基于 User22 的 [DaVinci_Script_Proxy_Generator](https://github.com/UserProjekt/DaVinci_Script_Proxy_Generator) 进行重构。
