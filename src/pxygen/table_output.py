@@ -1,6 +1,7 @@
 """Shared terminal table rendering helpers."""
 from __future__ import annotations
 
+import io
 import shutil
 from collections.abc import Callable
 
@@ -36,8 +37,9 @@ def output_table(
         table.add_row(*(str(cell).replace("\n", " ") for cell in row))
 
     terminal_width = max(shutil.get_terminal_size(fallback=(160, 20)).columns, 120)
+    buffer = io.StringIO()
     console = Console(
-        record=True,
+        file=buffer,
         width=terminal_width,
         color_system=None,
         force_terminal=False,
@@ -45,5 +47,5 @@ def output_table(
         legacy_windows=False,
     )
     console.print(table)
-    for line in console.export_text(styles=False).splitlines():
+    for line in buffer.getvalue().splitlines():
         output(line)
