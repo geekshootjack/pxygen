@@ -158,15 +158,10 @@ def _add_render_job(
         render_preset,
     )
     proxy_width, proxy_height = calculate_proxy_dimensions(resolution_str)
-    if hasattr(media_pool, "CreateEmptyTimeline") and hasattr(media_pool, "AppendToTimeline"):
-        timeline = media_pool.CreateEmptyTimeline(timeline_name)
-        if timeline is None:
-            raise ProxyGeneratorError(f"Failed to create timeline {timeline_name!r}.")
-        logger.debug("Created empty timeline %r before appending clips", timeline_name)
-    else:
-        timeline = media_pool.CreateTimelineFromClips(timeline_name, clips)
-        if timeline is None:
-            raise ProxyGeneratorError(f"Failed to create timeline {timeline_name!r} from clips.")
+    timeline = media_pool.CreateTimelineFromClips(timeline_name, clips)
+    if timeline is None:
+        raise ProxyGeneratorError(f"Failed to create timeline {timeline_name!r} from clips.")
+    logger.debug("Created timeline %r from %d clip(s)", timeline_name, len(clips))
 
     if hasattr(project, "SetCurrentTimeline"):
         if not project.SetCurrentTimeline(timeline):
@@ -192,11 +187,6 @@ def _add_render_job(
                     f"Timeline setting {setting_name!r} for {timeline_name!r} "
                     f"did not stick (expected {setting_value!r}, got {actual_value!r})."
                 )
-    if hasattr(media_pool, "AppendToTimeline"):
-        appended_items = media_pool.AppendToTimeline(clips)
-        if appended_items is None:
-            raise ProxyGeneratorError(f"Failed to append clips to timeline {timeline_name!r}.")
-        logger.debug("Appended %d clip(s) to timeline %r", len(clips), timeline_name)
     project.LoadRenderPreset(render_preset)
     project.SetRenderSettings(
         {

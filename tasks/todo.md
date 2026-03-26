@@ -16,6 +16,9 @@
 - [x] Lock a Resolve flow where timeline custom settings are applied before clips are appended
 - [x] Switch render-job creation to empty timeline + verified settings + append clips
 - [x] Re-verify that invalid-resolution warnings are isolated from valid timeline sizing
+- [x] Reproduce the real Resolve regression where empty timelines are created but clips are not appended
+- [x] Switch render-job creation back to clip-backed timelines while preserving explicit timeline binding and setting verification
+- [x] Re-verify timeline population and custom sizing behavior after removing the empty-timeline append path
 
 ## Notes
 
@@ -34,6 +37,7 @@
 - Added a regression test for mixed landscape/portrait clips to prove queued jobs preserve distinct proxy dimensions (`1920x1080` vs `608x1080`).
 - Switched render job creation from `CreateTimelineFromClips()` to `CreateEmptyTimeline()` + verified custom settings + `AppendToTimeline()` so Resolve gets the timeline size before any clips are placed.
 - Added runtime checks for timeline setting application so Resolve cannot silently queue a job after rejecting custom timeline dimensions.
+- Reverted the empty-timeline append path after real Resolve showed it could create empty timelines without adding clips; render jobs now use `CreateTimelineFromClips()` again, with explicit current-timeline binding and setting verification kept in place.
 - Verification:
   - `uv run pytest` -> 115 passed
   - `uv run ruff check src tests` -> All checks passed

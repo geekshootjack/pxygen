@@ -60,6 +60,8 @@ class FakeMediaPool:
         self.move_calls: list[tuple[list[FakeClip], FakeFolder]] = []
         self.current_folder_calls: list[FakeFolder] = []
         self.append_calls: list[dict] = []
+        self.create_empty_timeline_calls: list[str] = []
+        self.create_from_clips_calls: list[dict] = []
 
     def GetRootFolder(self):
         return self.root_folder
@@ -70,11 +72,15 @@ class FakeMediaPool:
         return folder
 
     def CreateEmptyTimeline(self, timeline_name: str):
+        self.create_empty_timeline_calls.append(timeline_name)
         timeline = FakeTimeline(timeline_name)
         self.timelines.append(timeline)
         return timeline
 
     def CreateTimelineFromClips(self, timeline_name: str, clips):
+        self.create_from_clips_calls.append(
+            {"timeline_name": timeline_name, "clips": list(clips)}
+        )
         timeline = FakeTimeline(timeline_name)
         timeline.clips = list(clips)
         self.timelines.append(timeline)
@@ -351,20 +357,12 @@ class TestProcessFilesInResolve:
             "0001-3840x2160",
             "0002-2160x3840",
         ]
-        assert [call["timeline"].name for call in media_pool.append_calls] == [
+        assert media_pool.create_empty_timeline_calls == []
+        assert [call["timeline_name"] for call in media_pool.create_from_clips_calls] == [
             "0001-3840x2160",
             "0002-2160x3840",
         ]
-        assert media_pool.append_calls[0]["settings_snapshot"] == {
-            "useCustomSettings": "1",
-            "timelineResolutionWidth": "1920",
-            "timelineResolutionHeight": "1080",
-        }
-        assert media_pool.append_calls[1]["settings_snapshot"] == {
-            "useCustomSettings": "1",
-            "timelineResolutionWidth": "608",
-            "timelineResolutionHeight": "1080",
-        }
+        assert [len(call["clips"]) for call in media_pool.create_from_clips_calls] == [1, 1]
         assert media_pool.timelines[0].settings["timelineResolutionWidth"] == "1920"
         assert media_pool.timelines[0].settings["timelineResolutionHeight"] == "1080"
         assert media_pool.timelines[1].settings["timelineResolutionWidth"] == "608"
