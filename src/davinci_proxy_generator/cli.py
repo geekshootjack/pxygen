@@ -124,9 +124,22 @@ def main() -> None:
             first = clean_path_input(args.args[0])
             output_path = clean_path_input(args.args[1])
             if is_json_file(first):
-                process_json_mode(first, output_path, args.group, args.in_depth, args.out_depth, **shared)
+                process_json_mode(
+                    first,
+                    output_path,
+                    args.group,
+                    args.in_depth,
+                    args.out_depth,
+                    **shared,
+                )
             else:
-                process_directory_mode(first, output_path, args.in_depth, args.out_depth, **shared)
+                process_directory_mode(
+                    first,
+                    output_path,
+                    args.in_depth,
+                    args.out_depth,
+                    **shared,
+                )
 
         else:
             parser.print_help()

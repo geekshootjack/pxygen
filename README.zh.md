@@ -86,13 +86,13 @@ pip install -e .
 
 ```sh
 # 目录模式——导入素材并生成代理
-proxy-generator -f /Volumes/SSD/Footage -p /Volumes/SSD/Proxy -i 4 -o 5
+proxy-generator -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5
 
 # JSON 模式——基于 File_Compare 结果重新生成缺失代理
-proxy-generator -j comparison.json -p /Volumes/SSD/Proxy -d 1 -i 4 -o 5
+proxy-generator -i comparison.json -o /Volumes/SSD/Proxy -g 1 -n 4 -d 5
 
 # 只处理特定拍摄日
-proxy-generator -f /Volumes/SSD/Footage -p /Volumes/SSD/Proxy -i 4 -o 5 \
+proxy-generator -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 \
   --filter "Shooting_Day_2,Shooting_Day_3"
 ```
 

@@ -8,16 +8,44 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Callable
 from pathlib import Path
 
 from .organize import (
+    describe_folders_at_in_depth,
     filter_folders_at_in_depth,
     organize_directory_mode_folders,
     organize_json_mode_files,
     parse_selection,
+    select_folders_at_in_depth,
 )
 from .paths import path_parts
-from .resolve import ProxyGeneratorError, process_files_in_resolve
+from .plan import build_resolve_execution_plan
+from .resolve import ProxyGeneratorError, execute_resolve_plan
+
+OutputFn = Callable[[str], None]
+InputFn = Callable[[], str]
+
+
+def _print_folder_options(options, in_depth: int, output: OutputFn) -> None:
+    output(f"\nFolders available at depth {in_depth}:")
+    for index, option in enumerate(options, 1):
+        output(f"  {index}. {option.label} ({option.item_count} items)")
+    output("\nSelect folders to process (numbers, range like 2-4, or 'all'):")
+
+
+def _read_selection_indices(
+    options,
+    in_depth: int,
+    *,
+    input_func: InputFn,
+    output: OutputFn,
+) -> list[int] | None:
+    _print_folder_options(options, in_depth, output)
+    choice = input_func().strip()
+    if choice.lower() == "all":
+        return None
+    return parse_selection(choice, len(options))
 
 
 def process_json_mode(
@@ -31,6 +59,9 @@ def process_json_mode(
     filter_mode: str | None = None,
     filter_list: str | None = None,
     codec: str = "auto",
+    input_func: InputFn | None = None,
+    output: OutputFn | None = None,
+    confirm_render: Callable[[], bool] | None = None,
 ) -> None:
     """Re-generate missing proxies from a file-comparison JSON produced by File_Compare.
 
@@ -47,6 +78,9 @@ def process_json_mode(
         codec: Render codec selection (see
             :func:`~davinci_proxy_generator.resolve.process_files_in_resolve`).
     """
+    input_func = input_func or input
+    output = output or print
+
     if out_depth < in_depth:
         raise ValueError("Output depth must be ≥ input depth")
     if dataset not in (1, 2):
@@ -64,45 +98,58 @@ def process_json_mode(
         path_key = f"path{dataset}"
         mismatch_files = [m[path_key] for m in comparison_data["frame_count_mismatches"]]
         file_list.extend(mismatch_files)
-        print(f"Added {len(mismatch_files)} files from frame count mismatches (group {dataset})")
+        output(f"Added {len(mismatch_files)} files from frame count mismatches (group {dataset})")
 
     if not file_list:
         raise ProxyGeneratorError(f"No files found in group{dataset}")
 
-    print(f"Found {len(file_list)} files in group{dataset}")
-    print("\n=== Configuration Summary ===")
-    print(f"JSON file:    {json_path}")
-    print(f"Dataset:      group{dataset}")
-    print(f"Input depth:  {in_depth}")
-    print(f"Output depth: {out_depth}")
+    output(f"Found {len(file_list)} files in group{dataset}")
+    output("\n=== Configuration Summary ===")
+    output(f"JSON file:    {json_path}")
+    output(f"Dataset:      group{dataset}")
+    output(f"Input depth:  {in_depth}")
+    output(f"Output depth: {out_depth}")
     if file_list:
         example = file_list[0]
         parts = path_parts(example)
         if len(parts) >= in_depth:
             if in_depth == out_depth:
-                print(f"Example:      {example}")
-                print(f"Folder name:  {parts[in_depth - 1]}")
+                output(f"Example:      {example}")
+                output(f"Folder name:  {parts[in_depth - 1]}")
             else:
-                print(f"Example:      {example}")
-                print(f"Key fragment: {os.sep.join(parts[in_depth - 1:out_depth])}")
+                output(f"Example:      {example}")
+                output(f"Key fragment: {os.sep.join(parts[in_depth - 1:out_depth])}")
 
     organized = organize_json_mode_files(file_list, in_depth, out_depth)
-    organized = filter_folders_at_in_depth(
-        organized, in_depth, filter_mode, filter_list, show_full_path=True
-    )
+    if filter_mode == "select":
+        options = describe_folders_at_in_depth(organized, show_full_path=True)
+        selected_indices = _read_selection_indices(
+            options, in_depth, input_func=input_func, output=output
+        )
+        if selected_indices is not None:
+            organized = select_folders_at_in_depth(organized, selected_indices)
+    elif filter_mode == "filter" and filter_list:
+        organized = filter_folders_at_in_depth(organized, filter_list)
+        if not organized:
+            available_names = sorted(
+                Path(key).name for key in organize_json_mode_files(file_list, in_depth, out_depth)
+            )
+            available = ", ".join(available_names)
+            output(f"Warning: No matching folders found for filter: {filter_list}")
+            output(f"Available folders: {available}")
 
     if not organized:
         raise ProxyGeneratorError("No folders to process after filtering.")
 
-    process_files_in_resolve(
+    plan = build_resolve_execution_plan(
         organized,
         list(organized),
         proxy_path,
-        out_depth - in_depth,
-        is_directory_mode=False,
+        mode_name="json",
         clean_image=clean_image,
         codec=codec,
     )
+    execute_resolve_plan(plan, output=output, confirm_render=confirm_render)
 
 
 def process_directory_mode(
@@ -115,6 +162,9 @@ def process_directory_mode(
     filter_mode: str | None = None,
     filter_list: str | None = None,
     codec: str = "auto",
+    input_func: InputFn | None = None,
+    output: OutputFn | None = None,
+    confirm_render: Callable[[], bool] | None = None,
 ) -> None:
     """Import footage directly from a folder hierarchy and generate proxies.
 
@@ -129,6 +179,9 @@ def process_directory_mode(
             filter_mode == ``'filter'``).
         codec: Render codec selection.
     """
+    input_func = input_func or input
+    output = output or print
+
     footage_dir = Path(footage_path)
     if not footage_dir.exists():
         raise ProxyGeneratorError(f"Footage folder does not exist: {footage_path}")
@@ -136,11 +189,11 @@ def process_directory_mode(
         raise ValueError("Output depth must be ≥ input depth")
 
     footage_depth = len(path_parts(footage_path))
-    print("\nDirectory mode:")
-    print(f"  Footage:      {footage_path} (depth: {footage_depth})")
-    print(f"  Proxy output: {proxy_path}")
-    print(f"  Input depth:  {in_depth}")
-    print(f"  Output depth: {out_depth}")
+    output("\nDirectory mode:")
+    output(f"  Footage:      {footage_path} (depth: {footage_depth})")
+    output(f"  Proxy output: {proxy_path}")
+    output(f"  Input depth:  {in_depth}")
+    output(f"  Output depth: {out_depth}")
 
     # --- Walk to find all folders at exactly in_depth ---
     input_depth_folders: list[str] = []
@@ -157,7 +210,7 @@ def process_directory_mode(
             f"No folders found at depth {in_depth} inside '{footage_path}'"
         )
 
-    print(f"  Found {len(input_depth_folders)} folder(s) at depth {in_depth}")
+    output(f"  Found {len(input_depth_folders)} folder(s) at depth {in_depth}")
 
     # --- For each input folder, collect target folders at out_depth ---
     # If a branch is shallower than out_depth, use the deepest available level.
@@ -191,12 +244,12 @@ def process_directory_mode(
     # --- Selection / filtering at the input-depth level ---
     if filter_mode == "select":
         folder_paths = sorted(targets_by_input)
-        print(f"\nFolders at depth {in_depth}:")
+        output(f"\nFolders at depth {in_depth}:")
         for i, fp in enumerate(folder_paths, 1):
             count = len(targets_by_input[fp])
-            print(f"  {i}. {fp}  ({count} sub-folder(s))")
-        print("\nSelect folders to process (numbers, range like 2-4, or 'all'):")
-        choice = input().strip()
+            output(f"  {i}. {fp}  ({count} sub-folder(s))")
+        output("\nSelect folders to process (numbers, range like 2-4, or 'all'):")
+        choice = input_func().strip()
         if choice.lower() != "all":
             selected = [folder_paths[i] for i in parse_selection(choice, len(folder_paths))]
             targets_by_input = {p: targets_by_input[p] for p in selected}
@@ -210,8 +263,8 @@ def process_directory_mode(
         }
         if not filtered:
             available = sorted(Path(fp).name for fp in targets_by_input)
-            print(f"Warning: No matching folders found for filter: {filter_list}")
-            print(f"Available: {', '.join(available)}")
+            output(f"Warning: No matching folders found for filter: {filter_list}")
+            output(f"Available: {', '.join(available)}")
             raise ProxyGeneratorError(
                 f"No matching folders found for filter: {filter_list}"
             )
@@ -223,7 +276,7 @@ def process_directory_mode(
     all_target_folders: list[str] = [
         folder for targets in targets_by_input.values() for folder in targets
     ]
-    print(f"\nTotal folders to process: {len(all_target_folders)}")
+    output(f"\nTotal folders to process: {len(all_target_folders)}")
 
     if in_depth == out_depth:
         organized = organize_directory_mode_folders(all_target_folders, in_depth)
@@ -233,12 +286,12 @@ def process_directory_mode(
     if not organized:
         organized = {footage_path: {"": all_target_folders}}
 
-    process_files_in_resolve(
+    plan = build_resolve_execution_plan(
         organized,
         list(organized),
         proxy_path,
-        out_depth - in_depth,
-        is_directory_mode=True,
+        mode_name="directory",
         clean_image=clean_image,
         codec=codec,
     )
+    execute_resolve_plan(plan, output=output, confirm_render=confirm_render)

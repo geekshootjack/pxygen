@@ -1,13 +1,20 @@
-"""File and folder organisation by path depth.
-
-All functions here are pure Python with no external dependencies.
-"""
+"""File and folder organisation by path depth."""
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
 from .paths import compute_key_path, path_parts
+
+
+@dataclass(frozen=True)
+class FolderOption:
+    """Display metadata for a selectable top-level folder."""
+
+    full_path: str
+    label: str
+    item_count: int
 
 
 def parse_selection(choice: str, max_num: int) -> list[int]:
@@ -85,59 +92,48 @@ def organize_directory_mode_folders(
     return organized
 
 
+def describe_folders_at_in_depth(
+    organized_files: dict[str, dict[str, list[str]]],
+    *,
+    show_full_path: bool = False,
+) -> list[FolderOption]:
+    """Return display-friendly folder options without performing any I/O."""
+    options: list[FolderOption] = []
+    for full_path in sorted(organized_files):
+        item_count = sum(len(v) for v in organized_files[full_path].values())
+        label = full_path if show_full_path else Path(full_path).name
+        options.append(FolderOption(full_path=full_path, label=label, item_count=item_count))
+    return options
+
+
+def select_folders_at_in_depth(
+    organized_files: dict[str, dict[str, list[str]]],
+    selected_indices: list[int],
+) -> dict[str, dict[str, list[str]]]:
+    """Return only folders referenced by *selected_indices* in sorted order."""
+    sorted_paths = sorted(organized_files)
+    return {
+        sorted_paths[index]: organized_files[sorted_paths[index]]
+        for index in selected_indices
+        if 0 <= index < len(sorted_paths)
+    }
+
+
 def filter_folders_at_in_depth(
     organized_files: dict[str, dict[str, list[str]]],
-    in_depth: int,
-    filter_mode: str | None = None,
     filter_list: str | None = None,
-    show_full_path: bool = False,
 ) -> dict[str, dict[str, list[str]]]:
-    """Filter *organized_files* to a subset of top-level keys.
-
-    Modes
-    -----
-    ``None``
-        Return unchanged.
-    ``'filter'``
-        Keep only keys whose *name* (last component) appears in *filter_list*
-        (comma-separated string).
-    ``'select'``
-        Print a numbered list and read a selection from stdin.
-    """
-    if not filter_mode:
+    """Filter *organized_files* to a subset of top-level keys by folder name."""
+    if not filter_list:
         return organized_files
 
     # Build name → full_path mapping (last path component as display name)
     folder_map: dict[str, str] = {
         Path(key_path).name: key_path for key_path in organized_files
     }
-
-    if filter_mode == "select":
-        sorted_paths = sorted(organized_files)
-        print(f"\nFolders available at depth {in_depth}:")
-        for i, full_path in enumerate(sorted_paths, 1):
-            file_count = sum(len(v) for v in organized_files[full_path].values())
-            label = full_path if show_full_path else Path(full_path).name
-            print(f"  {i}. {label} ({file_count} items)")
-        print("\nSelect folders to process (numbers, range like 2-4, or 'all'):")
-        choice = input().strip()
-        if choice.lower() == "all":
-            return organized_files
-        selected = [sorted_paths[i] for i in parse_selection(choice, len(sorted_paths))]
-        return {p: organized_files[p] for p in selected}
-
-    if filter_mode == "filter" and filter_list:
-        names = [n.strip() for n in filter_list.split(",")]
-        filtered = {
-            folder_map[n]: organized_files[folder_map[n]]
-            for n in names
-            if n in folder_map
-        }
-        if not filtered:
-            print(f"Warning: No matching folders found for filter: {filter_list}")
-            print(f"Available folders: {', '.join(sorted(folder_map))}")
-        else:
-            print(f"Filtering to folders: {', '.join(n for n in names if n in folder_map)}")
-        return filtered
-
-    return organized_files
+    names = [n.strip() for n in filter_list.split(",")]
+    return {
+        folder_map[n]: organized_files[folder_map[n]]
+        for n in names
+        if n in folder_map
+    }

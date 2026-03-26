@@ -5,7 +5,6 @@ process_files_in_resolve() and therefore untestable. Extraction during
 refactoring made it directly testable — this is a concrete benefit of
 the restructuring.
 """
-import pytest
 
 from davinci_proxy_generator.resolve import calculate_proxy_dimensions
 

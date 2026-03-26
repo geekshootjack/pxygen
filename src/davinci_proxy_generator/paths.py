@@ -5,8 +5,7 @@ Pathlib is used throughout for cross-platform correctness (Windows / macOS / Lin
 """
 from __future__ import annotations
 
-import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 
 def clean_path_input(path: str) -> str:
@@ -37,7 +36,9 @@ def path_parts(path: str | Path) -> list[str]:
     Examples (Windows):
         'C:\\Footage\\Day1' → ['C:', 'Footage', 'Day1']
     """
-    parts = Path(path).parts
+    path_str = str(path)
+    path_cls = PureWindowsPath if _looks_windows_path(path_str) else PurePosixPath
+    parts = path_cls(path_str).parts
     if not parts:
         return []
     result: list[str] = []
@@ -50,6 +51,16 @@ def path_parts(path: str | Path) -> list[str]:
         else:
             result.append(part)
     return result
+
+
+def _looks_windows_path(path_str: str) -> bool:
+    """Return True when *path_str* should use Windows path semantics."""
+    return len(path_str) >= 2 and path_str[1] == ":" or "\\" in path_str
+
+
+def _looks_windows_parts(parts: list[str]) -> bool:
+    """Return True when *parts* represent a Windows drive-based path."""
+    return bool(parts) and parts[0].endswith(":")
 
 
 def compute_key_path(
@@ -79,22 +90,20 @@ def compute_key_path(
         return None
     key_components = parts[:in_depth]
 
-    # On Windows, os.path.join('E:', 'foo') → 'E:foo' (no backslash).
-    # Reconstruct a proper absolute path by prepending the drive separator.
-    if os.name == "nt" and len(key_components) >= 1 and key_components[0].endswith(":"):
-        key_path = key_components[0] + os.sep + os.path.join(*key_components[1:]) if len(key_components) > 1 else key_components[0] + os.sep
-    else:
-        key_path = os.path.join(*key_components)
-
     if leading_sep is None:
-        leading_sep = os.sep == "/"
-    if leading_sep and not key_path.startswith(os.sep):
-        key_path = os.sep + key_path
-    return key_path
+        leading_sep = not _looks_windows_parts(key_components)
+
+    if _looks_windows_parts(key_components):
+        drive = f"{key_components[0]}\\"
+        windows_path = PureWindowsPath(drive, *key_components[1:])
+        return str(windows_path)
+
+    if leading_sep:
+        return str(PurePosixPath("/", *key_components))
+    return str(PurePosixPath(*key_components))
 
 
 def is_json_file(path: str) -> bool:
     """Return *True* if *path* looks like a JSON file (by extension or by being a real file)."""
-    return Path(path).suffix.lower() == ".json" or (
-        os.path.isfile(path) and not os.path.isdir(path)
-    )
+    path_obj = Path(path)
+    return path_obj.suffix.lower() == ".json" or (path_obj.is_file() and not path_obj.is_dir())

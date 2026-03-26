@@ -1,11 +1,11 @@
 """Tests for davinci_proxy_generator.cli — argument parsing and dispatch."""
 from __future__ import annotations
 
-from unittest.mock import patch, call
+from unittest.mock import patch
+
 import pytest
 
 from davinci_proxy_generator.cli import _build_parser, main
-
 
 # ---------------------------------------------------------------------------
 # _build_parser — flag parsing

@@ -3,25 +3,25 @@
 ## Synopsis
 
 ```
-proxy-generator (-f FOOTAGE | -j JSON) -p PROXY [options]
+proxy-generator -i INPUT -o OUTPUT [options]
 ```
 
 ## Modes
 
-### Directory Mode (`-f`)
+### Directory Mode
 
 Walks a footage folder tree, collects folders at the specified depth, imports them into DaVinci Resolve, and queues render jobs.
 
 ```sh
-proxy-generator -f /Volumes/SSD/Footage -p /Volumes/SSD/Proxy -i 4 -o 5
+proxy-generator -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5
 ```
 
-### JSON Mode (`-j`)
+### JSON Mode
 
 Re-generates missing or incomplete proxies using file paths from a [File_Compare](https://github.com/UserProjekt/File_Compare) JSON result.
 
 ```sh
-proxy-generator -j comparison.json -p /Volumes/SSD/Proxy -d 1 -i 4 -o 5
+proxy-generator -i comparison.json -o /Volumes/SSD/Proxy -g 1 -n 4 -d 5
 ```
 
 ---
@@ -32,9 +32,8 @@ proxy-generator -j comparison.json -p /Volumes/SSD/Proxy -d 1 -i 4 -o 5
 
 | Flag | Description |
 |------|-------------|
-| `-f, --footage PATH` | Footage root folder *(Directory mode)* |
-| `-j, --json PATH` | File_Compare JSON file *(JSON mode)* |
-| `-p, --proxy PATH` | Proxy output root folder |
+| `-i, --input PATH` | Footage root folder or File_Compare JSON file |
+| `-o, --output PATH` | Proxy output root folder |
 
 ### Depth Control
 
@@ -42,8 +41,8 @@ The depth values are **absolute** — counted from the filesystem root (includin
 
 | Flag | Default (macOS / other) | Description |
 |------|-------------------------|-------------|
-| `-i, --in-depth N` | 5 / 4 | Depth of the shooting-day folders |
-| `-o, --out-depth N` | 5 / 4 | Depth of the camera-reel folders (≥ in-depth) |
+| `-n, --in-depth N` | 5 / 4 | Depth of the shooting-day folders |
+| `-d, --out-depth N` | 5 / 4 | Depth of the camera-reel folders (≥ in-depth) |
 
 **Example** — given the path `/Volumes/SSD/Footage/Day1/A001`:
 
@@ -55,7 +54,7 @@ The depth values are **absolute** — counted from the filesystem root (includin
 | 4 | `Day1` |
 | 5 | `A001` |
 
-So `-i 4 -o 5` means: group by Day (depth 4), include camera reels as subfolders (depth 5).
+So `-n 4 -d 5` means: group by Day (depth 4), include camera reels as subfolders (depth 5).
 
 ### Folder Selection *(mutually exclusive)*
 
@@ -80,14 +79,14 @@ Select folders to process (numbers, range like 2-4, or 'all'):
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `-d, --dataset {1,2}` | `1` | Which group to use from the comparison JSON |
+| `-g, --group {1,2}` | `1` | Which group to use from the comparison JSON |
 
 ### Render Options
 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `-c, --clean-image` | off | Skip burn-in overlays (timecode + clip name) |
-| `-C, --codec CODEC` | `auto` | Override render preset (see below) |
+| `-k, --codec CODEC` | `auto` | Override render preset (see below) |
 
 **Codec values:**
 
@@ -105,20 +104,20 @@ The `auto` default exists because Adobe Premiere cannot hardware-decode 4:2:0 8-
 
 ```sh
 # Single depth level (shooting-day folders only)
-proxy-generator -f /Volumes/SSD/Footage -p /Volumes/SSD/Proxy -i 4 -o 4
+proxy-generator -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 4
 
 # Two depth levels (shooting day + camera reel)
-proxy-generator -f /Volumes/SSD/Footage -p /Volumes/SSD/Proxy -i 4 -o 5
+proxy-generator -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5
 
 # Force ProRes for all clips
-proxy-generator -f /Volumes/SSD/Footage -p /Volumes/SSD/Proxy -i 4 -o 5 -C prores
+proxy-generator -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 -k prores
 
 # Clean proxies (no burn-in), specific days
-proxy-generator -f /Volumes/SSD/Footage -p /Volumes/SSD/Proxy -i 4 -o 5 \
+proxy-generator -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 \
   -c --filter "Shooting_Day_3,Shooting_Day_4"
 
 # JSON mode, group 2, interactive selection
-proxy-generator -j comparison.json -p /Volumes/SSD/Proxy -d 2 -i 4 -o 5 --select
+proxy-generator -i comparison.json -o /Volumes/SSD/Proxy -g 2 -n 4 -d 5 --select
 ```
 
 ---

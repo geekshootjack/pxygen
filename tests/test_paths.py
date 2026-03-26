@@ -10,7 +10,6 @@ from davinci_proxy_generator.paths import (
     path_parts,
 )
 
-
 # ---------------------------------------------------------------------------
 # clean_path_input
 # ---------------------------------------------------------------------------
@@ -78,6 +77,10 @@ class TestPathParts:
         result = path_parts("/Volumes/SSD/Footage/Day1/CamA")
         assert len(result) == 5
 
+    def test_windows_path_uses_windows_semantics_even_on_non_windows_host(self):
+        result = path_parts(r"C:\Footage\Day1\CamA")
+        assert result == ["C:", "Footage", "Day1", "CamA"]
+
 
 # ---------------------------------------------------------------------------
 # compute_key_path
@@ -91,13 +94,9 @@ class TestComputeKeyPath:
         assert result == os.path.join("Volumes", "SSD", "Footage")
 
     def test_windows_drive_letter_has_separator(self):
-        # os.path.join('E:', 'foo') → 'E:foo' on Windows (missing backslash).
-        # compute_key_path must produce 'E:\foo', not 'E:foo'.
         parts = ["E:", "Footage", "Day1", "CamA"]
         result = compute_key_path(parts, 3, leading_sep=False)
-        assert result.startswith("E:" + os.sep), f"Expected 'E:{os.sep}...' but got '{result}'"
-        assert "Footage" in result
-        assert "Day1" in result
+        assert result == r"E:\Footage\Day1"
 
     def test_zero_depth_raises(self):
         with pytest.raises(ValueError):

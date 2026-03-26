@@ -86,13 +86,13 @@ pip install -e .
 
 ```sh
 # Directory mode — import footage and generate proxies
-proxy-generator -f /Volumes/SSD/Footage -p /Volumes/SSD/Proxy -i 4 -o 5
+proxy-generator -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5
 
 # JSON mode — re-generate missing proxies from a File_Compare result
-proxy-generator -j comparison.json -p /Volumes/SSD/Proxy -d 1 -i 4 -o 5
+proxy-generator -i comparison.json -o /Volumes/SSD/Proxy -g 1 -n 4 -d 5
 
 # Process only specific shooting days
-proxy-generator -f /Volumes/SSD/Footage -p /Volumes/SSD/Proxy -i 4 -o 5 \
+proxy-generator -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 \
   --filter "Shooting_Day_2,Shooting_Day_3"
 ```
 
