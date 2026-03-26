@@ -8,13 +8,8 @@ from __future__ import annotations
 
 import json
 import logging
-import shutil
 from collections.abc import Callable
 from pathlib import Path
-
-from rich import box
-from rich.console import Console
-from rich.table import Table
 
 from .organize import (
     describe_folders_at_in_depth,
@@ -27,46 +22,11 @@ from .organize import (
 from .paths import format_path_parts, path_parts
 from .plan import build_resolve_execution_plan
 from .resolve import ProxyGeneratorError, execute_resolve_plan
+from .table_output import output_table
 
 logger = logging.getLogger(__name__)
 OutputFn = Callable[[str], None]
 InputFn = Callable[[], str]
-
-def _output_table(
-    title: str,
-    headers: tuple[str, ...],
-    rows: list[tuple[object, ...]],
-    output: OutputFn,
-) -> None:
-    output(f"\n{title}")
-    table = Table(box=box.SIMPLE_HEAVY, show_header=True, header_style="", expand=False)
-    for index, header in enumerate(headers):
-        kwargs = {}
-        if index == 0:
-            kwargs["justify"] = "right"
-            kwargs["no_wrap"] = True
-        elif header in {"Items", "Sub-folders"}:
-            kwargs["justify"] = "right"
-            kwargs["no_wrap"] = True
-        elif header == "Parameter":
-            kwargs["no_wrap"] = True
-        table.add_column(str(header), **kwargs)
-
-    for row in rows:
-        table.add_row(*(str(cell).replace("\n", " ") for cell in row))
-
-    terminal_width = max(shutil.get_terminal_size(fallback=(160, 20)).columns, 120)
-    console = Console(
-        record=True,
-        width=terminal_width,
-        color_system=None,
-        force_terminal=False,
-        soft_wrap=False,
-        legacy_windows=False,
-    )
-    console.print(table)
-    for line in console.export_text(styles=False).splitlines():
-        output(line)
 
 
 def _print_folder_options(options, in_depth: int, output: OutputFn) -> None:
@@ -74,7 +34,7 @@ def _print_folder_options(options, in_depth: int, output: OutputFn) -> None:
         (index, option.label, option.item_count)
         for index, option in enumerate(options, 1)
     ]
-    _output_table(
+    output_table(
         f"Folders at depth {in_depth}:",
         ("#", "Folder", "Items"),
         rows,
@@ -227,7 +187,7 @@ def process_json_mode(
                         ),
                     ]
                 )
-    _output_table("JSON mode:", ("Parameter", "Value"), summary_rows, output)
+    output_table("JSON mode:", ("Parameter", "Value"), summary_rows, output)
 
     organized = organize_json_mode_files(file_list, in_depth, out_depth)
     logger.debug("JSON mode produced %d top-level folder group(s)", len(organized))
@@ -321,7 +281,7 @@ def process_directory_mode(
             f"No folders found at depth {in_depth} inside '{footage_path}'"
         )
 
-    _output_table(
+    output_table(
         "Directory mode:",
         ("Parameter", "Value"),
         [
@@ -374,7 +334,7 @@ def process_directory_mode(
     # --- Selection / filtering at the input-depth level ---
     if filter_mode == "select":
         folder_paths = sorted(targets_by_input)
-        _output_table(
+        output_table(
             f"Folders at depth {in_depth}:",
             ("#", "Folder", "Sub-folders"),
             [

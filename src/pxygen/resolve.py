@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .plan import ResolveExecutionPlan, build_resolve_execution_plan
+from .table_output import output_table
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,10 @@ class _ClipGroup:
     is_multi_audio: bool
     clips: tuple[object, ...]
     dest_bin: object
+
+
+def _audio_group_label(is_multi_audio: bool) -> str:
+    return "multi-audio" if is_multi_audio else "standard"
 
 
 def calculate_proxy_dimensions(resolution_str: str) -> tuple[str, str]:
@@ -248,7 +253,6 @@ def _classify_clips(
     media_pool,
     bin_folder,
     imported_clips: list,
-    output: Callable[[str], None],
 ) -> list[_ClipGroup]:
     group_order: list[tuple[str, bool]] = []
     grouped_clips: dict[tuple[str, bool], list[object]] = {}
@@ -323,12 +327,26 @@ def _queue_render_jobs_for_bin(
     counter,
     output: Callable[[str], None],
 ) -> None:
+    if clip_groups:
+        output_table(
+            "Render jobs:",
+            ("Resolution", "Audio", "Clips", "Target"),
+            [
+                (
+                    clip_group.resolution,
+                    _audio_group_label(clip_group.is_multi_audio),
+                    len(clip_group.clips),
+                    target_dir,
+                )
+                for clip_group in clip_groups
+            ],
+            output,
+        )
+
     for clip_group in clip_groups:
         if clip_group.is_multi_audio:
-            output(f"  Render target (multi-audio):  {target_dir}")
             render_preset = multi_audio_preset
         else:
-            output(f"  Render target (standard audio): {target_dir}")
             render_preset = standard_preset
 
         _add_render_job(
@@ -414,7 +432,6 @@ def execute_resolve_plan(
                     context.media_pool,
                     bin_folder,
                     imported_clips,
-                    output,
                 )
                 _queue_render_jobs_for_bin(
                     context.project,
@@ -449,6 +466,8 @@ def process_files_in_resolve(
     is_directory_mode: bool = False,
     clean_image: bool = False,
     codec: str = "auto",
+    output: Callable[[str], None] | None = None,
+    confirm_render: Callable[[], bool] | None = None,
 ) -> None:
     """Backward-compatible wrapper that builds and executes a Resolve plan."""
     del subfolder_depth
@@ -460,4 +479,4 @@ def process_files_in_resolve(
         clean_image=clean_image,
         codec=codec,
     )
-    execute_resolve_plan(plan)
+    execute_resolve_plan(plan, output=output, confirm_render=confirm_render)

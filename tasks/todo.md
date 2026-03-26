@@ -32,6 +32,9 @@
 - [x] Reproduce the real Resolve regression where empty timelines are created but clips are not appended
 - [x] Switch render-job creation back to clip-backed timelines while preserving explicit timeline binding and setting verification
 - [x] Re-verify timeline population and custom sizing behavior after removing the empty-timeline append path
+- [x] Replace repetitive Resolve render-target lines with a shared rich table summary
+- [x] Reuse one table-output helper across mode summaries and Resolve execution output
+- [x] Verify the new render-job table output with tests and full regression checks
 
 ## Notes
 
@@ -51,6 +54,7 @@
 - Switched render job creation from `CreateTimelineFromClips()` to `CreateEmptyTimeline()` + verified custom settings + `AppendToTimeline()` so Resolve gets the timeline size before any clips are placed.
 - Added runtime checks for timeline setting application so Resolve cannot silently queue a job after rejecting custom timeline dimensions.
 - Reverted the empty-timeline append path after real Resolve showed it could create empty timelines without adding clips; render jobs now use `CreateTimelineFromClips()` again, with explicit current-timeline binding and setting verification kept in place.
+- Reused a shared rich table helper across the CLI summaries and the Resolve execution layer, so repeated render-target lines now render as a compact `Render jobs` table with resolution, audio group, clip count, and target path columns.
 - Cleaned the repo root by moving handoff/reference material into `docs/`, moving the legacy script into `legacy/`, and deleting duplicate top-level `CLAUDE.md` / `TODO.md`.
 - Renamed the project branding and package metadata from ProxyPilot / `davinci-proxy-generator` to `pxygen`, while keeping `proxy-generator` as a compatibility CLI alias.
 - Fixed the JPG import gate so directory-mode batches are expanded to file paths before Resolve import, preventing JPG/JPEG files inside source folders from leaking into Resolve.

@@ -402,6 +402,42 @@ class TestProcessFilesInResolve:
             "0002-4096x2160-multi-audio",
         ]
 
+    def test_outputs_render_jobs_as_table_instead_of_repeated_target_lines(self, monkeypatch):
+        items = ["/source/a.mov", "/source/b.mov", "/source/c.mov"]
+        imports = {
+            tuple(items): [
+                FakeClip("4096x2160", "2"),
+                FakeClip("4096x2160", "2"),
+                FakeClip("4096x2160", "8"),
+            ]
+        }
+        _, project, _ = _install_fake_resolve(monkeypatch, imports)
+        output_lines: list[str] = []
+
+        process_files_in_resolve(
+            {"/footage/Day1": {"CamA": items}},
+            ["/footage/Day1"],
+            "/proxy",
+            1,
+            is_directory_mode=True,
+            codec="auto",
+            output=output_lines.append,
+            confirm_render=lambda: False,
+        )
+
+        output_text = "\n".join(output_lines)
+        assert "Render jobs:" in output_text
+        assert "Resolution" in output_text
+        assert "Audio" in output_text
+        assert "Clips" in output_text
+        assert "Target" in output_text
+        assert "4096x2160" in output_text
+        assert "multi-audio" in output_text
+        assert "standard" in output_text
+        assert "Render target (standard audio):" not in output_text
+        assert "Render target (multi-audio):" not in output_text
+        assert project.render_job_count == 2
+
     def test_queues_each_render_job_on_its_created_timeline(self, monkeypatch):
         items = ["/source/a.mov", "/source/b.mov"]
         imports = {
