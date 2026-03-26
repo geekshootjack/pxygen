@@ -148,6 +148,33 @@ class TestProcessJsonMode:
         assert "File count" in output_text
         assert "━" in output_text
 
+    def test_defaults_to_console_output_instead_of_logger_info(self, tmp_path):
+        json_path = tmp_path / "comparison.json"
+        json_path.write_text(
+            json.dumps(
+                {
+                    "files_only_in_group1": [
+                        "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with (
+            patch("pxygen.modes.execute_resolve_plan"),
+            patch("builtins.print") as mock_print,
+        ):
+            process_json_mode(
+                str(json_path),
+                "/proxy",
+                1,
+                4,
+                5,
+            )
+
+        assert mock_print.called
+
 
 class TestProcessDirectoryMode:
     def test_in_depth_equals_out_depth_groups_input_folders(self, tmp_path):

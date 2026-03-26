@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from pxygen.cli import _build_parser, main
+from pxygen.logging_utils import configure_logging
 
 # ---------------------------------------------------------------------------
 # _build_parser — flag parsing
@@ -85,6 +86,20 @@ class TestParser:
         assert args.log_level == "debug"
 
 
+class TestLoggingConfig:
+    def test_configure_logging_uses_standard_structured_format(self):
+        with patch("pxygen.logging_utils.logging.basicConfig") as mock_basic_config:
+            configure_logging("debug")
+
+        kwargs = mock_basic_config.call_args.kwargs
+        assert kwargs["level"] == logging.DEBUG
+        assert "%(asctime)s" in kwargs["format"]
+        assert "%(levelname)" in kwargs["format"]
+        assert "%(name)s" in kwargs["format"]
+        assert kwargs["datefmt"] == "%Y-%m-%d %H:%M:%S"
+        assert kwargs["force"] is True
+
+
 # ---------------------------------------------------------------------------
 # main() — dispatch logic
 # ---------------------------------------------------------------------------
@@ -110,6 +125,10 @@ class TestDispatch:
             mock_dir.assert_called_once()
             mock_json.assert_not_called()
             mock_logging.assert_called_once_with("info")
+            kwargs = mock_dir.call_args.kwargs
+            assert callable(kwargs["input_func"])
+            assert callable(kwargs["output"])
+            assert callable(kwargs["confirm_render"])
 
     def test_json_mode_dispatched(self, tmp_path):
         json_file = tmp_path / "comparison.json"

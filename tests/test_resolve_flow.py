@@ -5,6 +5,7 @@ import logging
 import sys
 import types
 from pathlib import PurePosixPath
+from unittest.mock import patch
 
 from pxygen.resolve import process_files_in_resolve
 
@@ -508,3 +509,21 @@ class TestProcessFilesInResolve:
         assert project.render_job_count == 1
         assert [timeline.name for timeline in media_pool.timelines] == ["0001-1920x1080"]
         assert all(timeline.name != "0001-" for timeline in media_pool.timelines)
+
+    def test_defaults_to_console_output_instead_of_logger_info(self, monkeypatch):
+        items = ["/source/a.mov"]
+        imports = {tuple(items): [FakeClip("1920x1080", "2")]}
+        _install_fake_resolve(monkeypatch, imports)
+
+        with patch("builtins.print") as mock_print:
+            process_files_in_resolve(
+                {"/footage/Day1": {"CamA": items}},
+                ["/footage/Day1"],
+                "/proxy",
+                1,
+                is_directory_mode=True,
+                codec="h265",
+                confirm_render=lambda: False,
+            )
+
+        assert mock_print.called

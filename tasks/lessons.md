@@ -15,3 +15,4 @@
 - Import-boundary filters must match the actual payload shape: if directory mode hands folders to Resolve, filtering only file-path batches will not work. Cover both file inputs and directory inputs in tests.
 - For terminal tables with mixed Chinese and ASCII text, stop hand-formatting widths. Use a maintained table-rendering library so wide-character alignment is handled by the renderer instead of by brittle string math.
 - When a TUI pattern is already represented as a structured table in one phase, extend that same table treatment to later repeated summaries instead of falling back to line-by-line logs; reuse one shared renderer so presentation stays consistent.
+- Do not let `logger.info` become an accidental UI transport. If the terminal has real presentation requirements, add a dedicated presenter/output layer and keep logging as logging.

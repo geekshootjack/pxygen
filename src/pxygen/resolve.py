@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .plan import ResolveExecutionPlan, build_resolve_execution_plan
+from .presenter import ConsolePresenter
 from .table_output import output_table
 
 logger = logging.getLogger(__name__)
@@ -199,6 +200,14 @@ def _add_render_job(
 ) -> None:
     if not clips:
         return
+    logger.info(
+        "Queueing render job timeline=%s resolution=%s clips=%d target=%s preset=%s",
+        timeline_name,
+        resolution_str,
+        len(clips),
+        target_dir,
+        render_preset,
+    )
     logger.debug(
         "Creating timeline %r for %d clip(s), resolution=%s, target=%s, preset=%s",
         timeline_name,
@@ -266,7 +275,7 @@ def _classify_clips(
         resolution = _normalize_resolution(raw_resolution)
         if resolution is None:
             logger.warning(
-                "Warning: skipping clip with invalid resolution property: %r",
+                "Skipping clip with invalid resolution property: %r",
                 raw_resolution,
             )
             continue
@@ -363,12 +372,6 @@ def _queue_render_jobs_for_bin(
             target_dir,
         )
 
-
-def _default_confirm_render(output: Callable[[str], None]) -> bool:
-    output("\nAll render jobs added. Start rendering now? (y/n)")
-    return input().strip().lower() == "y"
-
-
 def execute_resolve_plan(
     plan: ResolveExecutionPlan,
     *,
@@ -376,9 +379,21 @@ def execute_resolve_plan(
     confirm_render: Callable[[], bool] | None = None,
 ) -> None:
     """Execute a pre-built Resolve plan."""
-    output = output or logger.info
+    presenter = ConsolePresenter(output_func=output)
+    output = presenter.show
     context = _connect_to_resolve(plan.project_prefix)
     standard_preset, multi_audio_preset = _resolve_render_presets(plan.codec)
+    logger.info(
+        (
+            "Executing Resolve plan mode=%s project_prefix=%s "
+            "footage_folders=%d codec=%s clean_image=%s"
+        ),
+        plan.mode_name,
+        plan.project_prefix,
+        len(plan.footage_folders),
+        plan.codec,
+        plan.clean_image,
+    )
     logger.debug(
         (
             "Executing Resolve plan: mode=%s project_prefix=%s "
@@ -399,6 +414,7 @@ def execute_resolve_plan(
 
     for footage_folder in plan.footage_folders:
         output(f"\nProcessing footage folder: {footage_folder.footage_folder_name}")
+        logger.info("Processing footage folder %s", footage_folder.footage_folder_name)
         main_bin = context.media_pool.AddSubFolder(
             context.root_folder, footage_folder.footage_folder_name
         )
@@ -417,10 +433,16 @@ def execute_resolve_plan(
                 imported_clips = context.media_storage.AddItemListToMediaPool(list(items_to_import))
                 if not imported_clips:
                     logger.warning(
-                        "Warning: failed to import items from %s",
+                        "Failed to import items from %s",
                         batch.subfolder_key or footage_folder.footage_folder_name,
                     )
                     continue
+                logger.info(
+                    "Imported %d clip(s) for batch=%s target_dir=%s",
+                    len(imported_clips),
+                    batch.subfolder_key or footage_folder.footage_folder_name,
+                    batch.target_dir,
+                )
                 logger.debug(
                     "Imported %d clip(s)/item(s) for batch %r under %s",
                     len(imported_clips),
@@ -444,16 +466,21 @@ def execute_resolve_plan(
                     output,
                 )
             except Exception as exc:
-                logger.error("  Error processing items: %s", exc)
+                logger.error("Error processing items: %s", exc)
                 continue
 
     context.project_manager.SaveProject()
+    logger.info("Saved Resolve project")
     logger.debug("Saved Resolve project")
-    should_start_render = confirm_render or (lambda: _default_confirm_render(output))
+    should_start_render = confirm_render or (
+        lambda: presenter.confirm("\nAll render jobs added. Start rendering now? (y/n)")
+    )
     if should_start_render():
         context.project.StartRendering()
+        logger.info("Started Resolve rendering")
         output("Rendering started.")
     else:
+        logger.info("Render jobs queued; waiting for manual start in Resolve")
         output("Project saved. Start rendering manually in DaVinci Resolve.")
 
 

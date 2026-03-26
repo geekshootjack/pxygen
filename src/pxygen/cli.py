@@ -12,6 +12,7 @@ import sys
 from .logging_utils import configure_logging
 from .modes import process_directory_mode, process_json_mode
 from .paths import clean_path_input, is_json_file
+from .presenter import ConsolePresenter
 from .resolve import ProxyGeneratorError
 
 logger = logging.getLogger(__name__)
@@ -101,6 +102,7 @@ def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
     configure_logging(args.log_level)
+    presenter = ConsolePresenter()
 
     filter_mode = "select" if args.select else ("filter" if args.filter else None)
     filter_list = args.filter if filter_mode == "filter" else None
@@ -110,6 +112,11 @@ def main() -> None:
         filter_mode=filter_mode,
         filter_list=filter_list,
         codec=args.codec,
+        input_func=presenter.read_line,
+        output=presenter.show,
+        confirm_render=lambda: presenter.confirm(
+            "\nAll render jobs added. Start rendering now? (y/n)"
+        ),
     )
 
     try:
@@ -158,10 +165,10 @@ def main() -> None:
             sys.exit(1)
 
     except ProxyGeneratorError as exc:
-        logger.error("Error: %s", exc)
+        logger.error("%s", exc)
         sys.exit(1)
     except ValueError as exc:
-        logger.error("Error: %s", exc)
+        logger.error("%s", exc)
         sys.exit(1)
     except AttributeError as exc:
         # Typically: Resolve API returned None (Resolve not running or API call failed)

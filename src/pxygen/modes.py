@@ -21,6 +21,7 @@ from .organize import (
 )
 from .paths import format_path_parts, path_parts
 from .plan import build_resolve_execution_plan
+from .presenter import ConsolePresenter
 from .resolve import ProxyGeneratorError, execute_resolve_plan
 from .table_output import output_table
 
@@ -123,8 +124,17 @@ def process_json_mode(
         codec: Render codec selection (see
             :func:`~pxygen.resolve.process_files_in_resolve`).
     """
-    input_func = input_func or input
-    output = output or logger.info
+    presenter = ConsolePresenter(output_func=output, input_func=input_func)
+    input_func = presenter.read_line
+    output = presenter.show
+    logger.info(
+        "Running JSON mode json_path=%s proxy_path=%s dataset=%d in_depth=%d out_depth=%d",
+        json_path,
+        proxy_path,
+        dataset,
+        in_depth,
+        out_depth,
+    )
 
     if out_depth < in_depth:
         raise ValueError("Output depth must be ≥ input depth")
@@ -145,6 +155,11 @@ def process_json_mode(
         mismatch_files = [m[path_key] for m in comparison_data["frame_count_mismatches"]]
         file_list.extend(mismatch_files)
         output(f"Added {len(mismatch_files)} files from frame count mismatches (group {dataset})")
+        logger.info(
+            "Added %d frame-count mismatch file(s) for dataset=%d",
+            len(mismatch_files),
+            dataset,
+        )
         logger.debug(
             "Merged %d frame-count mismatch file(s) into dataset %s",
             len(mismatch_files),
@@ -155,6 +170,7 @@ def process_json_mode(
         raise ProxyGeneratorError(f"No files found in group{dataset}")
 
     output(f"Found {len(file_list)} files in group{dataset}")
+    logger.info("Found %d file(s) in group%d", len(file_list), dataset)
     summary_rows: list[tuple[object, ...]] = [
         ("JSON file", json_path),
         ("Dataset", f"group{dataset}"),
@@ -206,7 +222,7 @@ def process_json_mode(
                 Path(key).name for key in organize_json_mode_files(file_list, in_depth, out_depth)
             )
             available = ", ".join(available_names)
-            logger.warning("Warning: No matching folders found for filter: %s", filter_list)
+            logger.warning("No matching folders found for filter: %s", filter_list)
             logger.warning("Available folders: %s", available)
         else:
             logger.debug("JSON mode filter %r kept %d folder group(s)", filter_list, len(organized))
@@ -256,8 +272,16 @@ def process_directory_mode(
             filter_mode == ``'filter'``).
         codec: Render codec selection.
     """
-    input_func = input_func or input
-    output = output or logger.info
+    presenter = ConsolePresenter(output_func=output, input_func=input_func)
+    input_func = presenter.read_line
+    output = presenter.show
+    logger.info(
+        "Running directory mode footage_path=%s proxy_path=%s in_depth=%d out_depth=%d",
+        footage_path,
+        proxy_path,
+        in_depth,
+        out_depth,
+    )
 
     footage_dir = Path(footage_path)
     if not footage_dir.exists():
@@ -274,6 +298,12 @@ def process_directory_mode(
         "Directory mode discovered %d folder(s) at input depth %d",
         len(input_depth_folders),
         in_depth,
+    )
+    logger.info(
+        "Discovered %d folder(s) at input depth %d for %s",
+        len(input_depth_folders),
+        in_depth,
+        footage_path,
     )
 
     if not input_depth_folders:
@@ -363,7 +393,7 @@ def process_directory_mode(
         }
         if not filtered:
             available = sorted(Path(fp).name for fp in targets_by_input)
-            logger.warning("Warning: No matching folders found for filter: %s", filter_list)
+            logger.warning("No matching folders found for filter: %s", filter_list)
             logger.warning("Available: %s", ", ".join(available))
             raise ProxyGeneratorError(
                 f"No matching folders found for filter: {filter_list}"
@@ -378,6 +408,7 @@ def process_directory_mode(
         folder for targets in targets_by_input.values() for folder in targets
     ]
     output(f"\nTotal folders to process: {len(all_target_folders)}")
+    logger.info("Total folders to process: %d", len(all_target_folders))
 
     if in_depth == out_depth:
         organized = organize_directory_mode_folders(all_target_folders, in_depth)
