@@ -38,6 +38,9 @@
 - [x] Decouple user-facing TUI rendering from the logging subsystem
 - [x] Route default CLI output through a dedicated console presenter instead of `logger.info`
 - [x] Restore logging to a standard detailed format and verify the separation with tests
+- [x] Add optional file-backed logging so operational logs can be persisted per run
+- [x] Wire file logging through the CLI without mixing TUI output into the log file
+- [x] Verify file logging behavior with parser and runtime tests
 
 ## Notes
 
@@ -59,6 +62,7 @@
 - Reverted the empty-timeline append path after real Resolve showed it could create empty timelines without adding clips; render jobs now use `CreateTimelineFromClips()` again, with explicit current-timeline binding and setting verification kept in place.
 - Reused a shared rich table helper across the CLI summaries and the Resolve execution layer, so repeated render-target lines now render as a compact `Render jobs` table with resolution, audio group, clip count, and target path columns.
 - Decoupled terminal presentation from logging by adding a dedicated console presenter; user-facing tables, prompts, and progress text now go directly to stdout/stdin, while logging keeps a standard timestamped format and records operational events separately.
+- Added optional `--log-file` support so the standard operational log stream can be persisted to a file for a run, while the TUI layer remains stdout-only and does not pollute the log file.
 - Cleaned the repo root by moving handoff/reference material into `docs/`, moving the legacy script into `legacy/`, and deleting duplicate top-level `CLAUDE.md` / `TODO.md`.
 - Renamed the project branding and package metadata from ProxyPilot / `davinci-proxy-generator` to `pxygen`, while keeping `proxy-generator` as a compatibility CLI alias.
 - Fixed the JPG import gate so directory-mode batches are expanded to file paths before Resolve import, preventing JPG/JPEG files inside source folders from leaking into Resolve.

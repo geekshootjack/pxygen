@@ -91,6 +91,10 @@ def _build_parser():
         default="info",
         help="Logging verbosity",
     )
+    parser.add_argument(
+        "--log-file",
+        help="Optional file path for detailed runtime logs",
+    )
 
     # Legacy positional arguments kept for backward compatibility
     parser.add_argument("args", nargs="*", help=argparse.SUPPRESS)
@@ -101,7 +105,7 @@ def _build_parser():
 def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
-    configure_logging(args.log_level)
+    configure_logging(args.log_level, args.log_file)
     presenter = ConsolePresenter()
 
     filter_mode = "select" if args.select else ("filter" if args.filter else None)

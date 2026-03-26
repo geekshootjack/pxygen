@@ -85,6 +85,10 @@ class TestParser:
         args = self._parse(["-i", "/f", "-o", "/p", "--log-level", "debug"])
         assert args.log_level == "debug"
 
+    def test_log_file_flag(self):
+        args = self._parse(["-i", "/f", "-o", "/p", "--log-file", "/tmp/pxygen.log"])
+        assert args.log_file == "/tmp/pxygen.log"
+
 
 class TestLoggingConfig:
     def test_configure_logging_uses_standard_structured_format(self):
@@ -97,7 +101,29 @@ class TestLoggingConfig:
         assert "%(levelname)" in kwargs["format"]
         assert "%(name)s" in kwargs["format"]
         assert kwargs["datefmt"] == "%Y-%m-%d %H:%M:%S"
+        assert len(kwargs["handlers"]) == 1
         assert kwargs["force"] is True
+
+    def test_configure_logging_adds_file_handler_when_requested(self, tmp_path):
+        log_path = tmp_path / "logs" / "run.log"
+        with patch("pxygen.logging_utils.logging.basicConfig") as mock_basic_config:
+            configure_logging("info", str(log_path))
+
+        kwargs = mock_basic_config.call_args.kwargs
+        assert len(kwargs["handlers"]) == 2
+        assert log_path.parent.exists()
+
+    def test_configure_logging_writes_messages_to_log_file(self, tmp_path):
+        log_path = tmp_path / "logs" / "run.log"
+        configure_logging("info", str(log_path))
+
+        logger = logging.getLogger("pxygen.test")
+        logger.info("hello log file")
+
+        contents = log_path.read_text(encoding="utf-8")
+        assert "INFO" in contents
+        assert "pxygen.test" in contents
+        assert "hello log file" in contents
 
 
 # ---------------------------------------------------------------------------
@@ -124,11 +150,23 @@ class TestDispatch:
             self._run(["-i", str(footage), "-o", "/proxy"])
             mock_dir.assert_called_once()
             mock_json.assert_not_called()
-            mock_logging.assert_called_once_with("info")
+            mock_logging.assert_called_once_with("info", None)
             kwargs = mock_dir.call_args.kwargs
             assert callable(kwargs["input_func"])
             assert callable(kwargs["output"])
             assert callable(kwargs["confirm_render"])
+
+    def test_log_file_passed_to_logging_configuration(self, tmp_path):
+        footage = tmp_path / "footage"
+        footage.mkdir()
+        log_path = tmp_path / "run.log"
+        with (
+            patch(_MOCK_DIR),
+            patch("pxygen.cli.configure_logging") as mock_logging,
+        ):
+            self._run(["-i", str(footage), "-o", "/proxy", "--log-file", str(log_path)])
+
+        mock_logging.assert_called_once_with("info", str(log_path))
 
     def test_json_mode_dispatched(self, tmp_path):
         json_file = tmp_path / "comparison.json"
