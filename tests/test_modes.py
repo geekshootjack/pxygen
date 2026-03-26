@@ -116,6 +116,37 @@ class TestProcessJsonMode:
                 filter_list="Day99",
             )
 
+    def test_outputs_json_summary_as_table(self, tmp_path):
+        json_path = tmp_path / "comparison.json"
+        json_path.write_text(
+            json.dumps(
+                {
+                    "files_only_in_group1": [
+                        "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        output_lines: list[str] = []
+
+        with patch("pxygen.modes.execute_resolve_plan"):
+            process_json_mode(
+                str(json_path),
+                "/proxy",
+                1,
+                4,
+                5,
+                output=output_lines.append,
+            )
+
+        output_text = "\n".join(output_lines)
+        assert "JSON mode:" in output_text
+        assert "| Parameter " in output_text
+        assert "| Value " in output_text
+        assert "| Dataset" in output_text
+        assert "| File count" in output_text
+
 
 class TestProcessDirectoryMode:
     def test_in_depth_equals_out_depth_groups_input_folders(self, tmp_path):
@@ -179,3 +210,33 @@ class TestProcessDirectoryMode:
 
         plan = mock_execute.call_args.args[0]
         assert [folder.footage_folder_path for folder in plan.footage_folders] == [str(day2)]
+
+    def test_outputs_directory_summary_and_selection_as_tables(self, tmp_path):
+        footage_root = tmp_path / "footage"
+        (footage_root / "Day1" / "CamA").mkdir(parents=True)
+        (footage_root / "Day2" / "CamA").mkdir(parents=True)
+        day1 = footage_root / "Day1"
+        in_depth = len(path_parts(day1))
+        out_depth = in_depth + 1
+        output_lines: list[str] = []
+
+        with (
+            patch("pxygen.modes.execute_resolve_plan"),
+            patch("builtins.input", return_value="all"),
+        ):
+            process_directory_mode(
+                str(footage_root),
+                "/proxy",
+                in_depth,
+                out_depth,
+                filter_mode="select",
+                output=output_lines.append,
+            )
+
+        output_text = "\n".join(output_lines)
+        assert "Directory mode:" in output_text
+        assert "| Parameter " in output_text
+        assert "| Value " in output_text
+        assert "Folders at depth" in output_text
+        assert "| # " in output_text
+        assert "| Folder " in output_text

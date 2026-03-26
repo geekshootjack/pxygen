@@ -28,10 +28,58 @@ OutputFn = Callable[[str], None]
 InputFn = Callable[[], str]
 
 
+def _stringify_table_cell(value: object) -> str:
+    return str(value).replace("\n", " ")
+
+
+def _render_table(headers: tuple[str, ...], rows: list[tuple[object, ...]]) -> list[str]:
+    """Render a simple ASCII table for terminal output."""
+    normalized_headers = tuple(_stringify_table_cell(header) for header in headers)
+    normalized_rows = [
+        tuple(_stringify_table_cell(cell) for cell in row)
+        for row in rows
+    ]
+    widths = [
+        max(
+            len(normalized_headers[index]),
+            *(len(row[index]) for row in normalized_rows),
+        )
+        for index in range(len(normalized_headers))
+    ]
+
+    def _format_row(row: tuple[str, ...]) -> str:
+        cells = [f" {cell:<{widths[index]}} " for index, cell in enumerate(row)]
+        return "|" + "|".join(cells) + "|"
+
+    separator = "+" + "+".join("-" * (width + 2) for width in widths) + "+"
+    lines = [separator, _format_row(normalized_headers), separator]
+    lines.extend(_format_row(row) for row in normalized_rows)
+    lines.append(separator)
+    return lines
+
+
+def _output_table(
+    title: str,
+    headers: tuple[str, ...],
+    rows: list[tuple[object, ...]],
+    output: OutputFn,
+) -> None:
+    output(f"\n{title}")
+    for line in _render_table(headers, rows):
+        output(line)
+
+
 def _print_folder_options(options, in_depth: int, output: OutputFn) -> None:
-    output(f"\nFolders available at depth {in_depth}:")
-    for index, option in enumerate(options, 1):
-        output(f"  {index}. {option.label} ({option.item_count} items)")
+    rows = [
+        (index, option.label, option.item_count)
+        for index, option in enumerate(options, 1)
+    ]
+    _output_table(
+        f"Folders at depth {in_depth}:",
+        ("#", "Folder", "Items"),
+        rows,
+        output,
+    )
     output("\nSelect folders to process (numbers, range like 2-4, or 'all'):")
 
 
@@ -147,28 +195,39 @@ def process_json_mode(
         raise ProxyGeneratorError(f"No files found in group{dataset}")
 
     output(f"Found {len(file_list)} files in group{dataset}")
-    output("\n=== Configuration Summary ===")
-    output(f"JSON file:    {json_path}")
-    output(f"Dataset:      group{dataset}")
-    output(f"Input depth:  {in_depth}")
-    output(f"Output depth: {out_depth}")
+    summary_rows: list[tuple[object, ...]] = [
+        ("JSON file", json_path),
+        ("Dataset", f"group{dataset}"),
+        ("Input depth", in_depth),
+        ("Output depth", out_depth),
+        ("File count", len(file_list)),
+    ]
     if file_list:
         example = file_list[0]
         parts = path_parts(example)
         if len(parts) >= in_depth:
             if in_depth == out_depth:
-                output(f"Example:      {example}")
-                output(f"Folder name:  {parts[in_depth - 1]}")
+                summary_rows.extend(
+                    [
+                        ("Example", example),
+                        ("Folder name", parts[in_depth - 1]),
+                    ]
+                )
             else:
                 fragment_parts = parts[in_depth - 1:out_depth]
-                output(f"Example:      {example}")
-                output(
-                    "Key fragment: "
-                    + format_path_parts(
-                        fragment_parts,
-                        windows=":" in example[:3] or "\\" in example,
-                    )
+                summary_rows.extend(
+                    [
+                        ("Example", example),
+                        (
+                            "Key fragment",
+                            format_path_parts(
+                                fragment_parts,
+                                windows=":" in example[:3] or "\\" in example,
+                            ),
+                        ),
+                    ]
                 )
+    _output_table("JSON mode:", ("Parameter", "Value"), summary_rows, output)
 
     organized = organize_json_mode_files(file_list, in_depth, out_depth)
     logger.debug("JSON mode produced %d top-level folder group(s)", len(organized))
@@ -247,12 +306,6 @@ def process_directory_mode(
         raise ValueError("Output depth must be ≥ input depth")
 
     footage_depth = len(path_parts(footage_path))
-    output("\nDirectory mode:")
-    output(f"  Footage:      {footage_path} (depth: {footage_depth})")
-    output(f"  Proxy output: {proxy_path}")
-    output(f"  Input depth:  {in_depth}")
-    output(f"  Output depth: {out_depth}")
-
     # --- Walk to find all folders at exactly in_depth ---
     input_depth_folders = [
         str(path) for path in _collect_directories_at_depth(footage_dir, in_depth)
@@ -268,7 +321,18 @@ def process_directory_mode(
             f"No folders found at depth {in_depth} inside '{footage_path}'"
         )
 
-    output(f"  Found {len(input_depth_folders)} folder(s) at depth {in_depth}")
+    _output_table(
+        "Directory mode:",
+        ("Parameter", "Value"),
+        [
+            ("Footage", f"{footage_path} (depth: {footage_depth})"),
+            ("Proxy output", proxy_path),
+            ("Input depth", in_depth),
+            ("Output depth", out_depth),
+            ("Found folders", len(input_depth_folders)),
+        ],
+        output,
+    )
 
     # --- For each input folder, collect target folders at out_depth ---
     # If a branch is shallower than out_depth, use the deepest available level.
@@ -310,14 +374,23 @@ def process_directory_mode(
     # --- Selection / filtering at the input-depth level ---
     if filter_mode == "select":
         folder_paths = sorted(targets_by_input)
-        output(f"\nFolders at depth {in_depth}:")
-        for i, fp in enumerate(folder_paths, 1):
-            count = len(targets_by_input[fp])
-            output(f"  {i}. {fp}  ({count} sub-folder(s))")
+        _output_table(
+            f"Folders at depth {in_depth}:",
+            ("#", "Folder", "Sub-folders"),
+            [
+                (index, folder_path, len(targets_by_input[folder_path]))
+                for index, folder_path in enumerate(folder_paths, 1)
+            ],
+            output,
+        )
         output("\nSelect folders to process (numbers, range like 2-4, or 'all'):")
         choice = input_func().strip()
-        if choice.lower() != "all":
-            selected = [folder_paths[i] for i in parse_selection(choice, len(folder_paths))]
+        if choice.lower() == "all":
+            selected_indices = None
+        else:
+            selected_indices = parse_selection(choice, len(folder_paths))
+        if selected_indices is not None:
+            selected = [folder_paths[i] for i in selected_indices]
             logger.debug("Directory mode selected folder paths: %s", selected)
             targets_by_input = {p: targets_by_input[p] for p in selected}
 
