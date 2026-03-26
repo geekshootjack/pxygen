@@ -6,7 +6,6 @@ Supports both named flags and the legacy positional-argument syntax.
 from __future__ import annotations
 
 import logging
-import platform
 import sys
 
 from .logging_utils import configure_logging
@@ -27,7 +26,7 @@ def _build_parser():
     ):
         pass
 
-    default_depth = 5 if platform.system() == "Darwin" else 4
+    default_depth = 1
 
     parser = argparse.ArgumentParser(
         prog="pxygen",

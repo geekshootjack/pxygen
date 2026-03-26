@@ -69,11 +69,9 @@ class TestParser:
             self._parse(["-i", "/f", "-o", "/p", "-k", "vp9"])
 
     def test_defaults(self):
-        import platform
         args = self._parse(["-i", "/f", "-o", "/p"])
-        expected_depth = 5 if platform.system() == "Darwin" else 4
-        assert args.in_depth == expected_depth
-        assert args.out_depth == expected_depth
+        assert args.in_depth == 1
+        assert args.out_depth == 1
         assert args.group == 1
         assert args.codec == "auto"
         assert args.log_level == "warning"

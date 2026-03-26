@@ -120,7 +120,7 @@ CLI (cli.py)
 `--in-depth` = how many levels below the chosen input folder count as one footage group.
 `--out-depth` = how many levels below the chosen input folder should still be preserved as subfolders.
 
-macOS default: 5. Windows default: 4.
+Default: 1 on all platforms.
 
 Example:
 ```
