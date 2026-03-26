@@ -182,11 +182,7 @@ This addendum summarizes all commits currently on the feature branch relative to
 ### Branch commit history
 
 1. `ef5a617` `refactor(resolve): split execution flow and add planning layer`
-<<<<<<<< HEAD:docs/HANDOFF.md
-   - Added internal planning dataclasses in `src/davinci_proxy_generator/plan.py`
-========
    - Added internal planning dataclasses in `src/pxygen/plan.py`
->>>>>>>> codex/resolve-refactor-tdd:docs/handoff.md
    - Refactored `modes.py` to build execution plans before calling Resolve
    - Split `resolve.py` into smaller orchestration helpers
    - Added orchestration-heavy tests in `tests/test_modes.py` and `tests/test_resolve_flow.py`
@@ -276,3 +272,67 @@ The next agent should start from runtime verification inside a real Resolve sess
 ### Important caution
 
 Do **not** assume fake tests prove correct Resolve behavior here. The current test suite passes, but this specific issue is now known to be a real integration gap between mocks and DaVinci Resolve itself.
+
+---
+
+## Main Branch Addendum — Work Completed Since the Previous Handoff
+
+This section covers the work that landed after the earlier feature-branch handoff summary above. Current branch state is `main` at commit `29dfb52`.
+
+### Resolve / media-processing changes
+
+1. `7a6cb16` `fix(resolve): preserve portrait proxy orientation`
+   - Corrected proxy sizing for portrait footage.
+   - Portrait sources such as `2160x3840` now target `1080x1920` instead of the earlier incorrect `608x1080` behavior.
+   - Added exact-dimension regression coverage so portrait handling is no longer validated only by "even width" heuristics.
+
+2. `b2b2a7a` `fix(resolve): skip jpg imports before resolve`
+   - Added a pre-import gate that filters `.jpg` / `.jpeg` before calling Resolve import APIs.
+   - The filter now handles both direct file batches and directory batches that must be expanded recursively first.
+   - This avoids useless Resolve imports for still JPG assets that were never intended to become proxies.
+
+### Branch integration and repo maintenance
+
+3. `f70a99b` `merge: integrate resolve refactor milestone`
+   - Merged the feature branch back into `main`.
+   - This brought the planning-layer refactor, pathlib cleanup, batched clip moves, timeline renaming, and early Resolve fixes into the main branch.
+
+4. `18e2ca9` `docs(changelog): add resolve refactor milestone summary`
+   - Added `docs/changelog.md` as a running changelog for the merge milestone.
+
+5. `880965f` `chore(skills): remove unused local skills`
+   - Removed stale local skill files that were no longer part of the repo workflow.
+
+### TUI / operator experience improvements
+
+6. `741fa62` `feat(tui): render mode summaries as tables`
+   - Reworked the mode summaries to display as tables rather than loose line-by-line text.
+   - This improved readability for directory-mode parameters and folder selection output.
+
+7. `45d90e5` `feat(tui): use rich for table output`
+   - Switched table rendering to `rich.Table` for better alignment, especially with mixed Chinese and ASCII text.
+   - Added `src/pxygen/table_output.py` as the shared renderer for table-style output.
+
+8. `37f8817` `feat(tui): summarize render jobs in tables`
+   - Replaced repeated Resolve-stage `Render target ...` lines with a compact `Render jobs` table.
+   - The table summarizes resolution, audio type, clip count, and target output path before queueing jobs.
+
+### Logging and observability changes
+
+9. `6ed4b43` `refactor(logging): decouple tui presentation from logs`
+   - Introduced `src/pxygen/presenter.py` so user-facing terminal output no longer rides on `logger.info`.
+   - TUI rendering now goes directly to stdout/stdin through a presenter layer.
+   - Logging was restored to standard structured output with timestamps, levels, logger names, and detailed operational events.
+
+10. `29dfb52` `feat(logging): add optional log file output`
+   - Added `--log-file /path/to/file.log` to the CLI.
+   - Standard runtime logs can now be written to a file while the TUI remains terminal-only and does not pollute the log file.
+   - The logging configuration now supports both stream output and optional file-backed logging in a single run.
+
+### Current status
+
+- `main` currently includes the refactor milestone plus the follow-on TUI/logging work above.
+- Test baseline at the time of this handoff update:
+  - `uv run pytest` -> `128 passed`
+  - `uv run ruff check src tests` -> `All checks passed!`
+- The unresolved live Resolve timeline-sizing concern documented in the earlier section above has **not** been conclusively solved by the later commits listed here; the later work focused on operator experience, logging, repo hygiene, and JPG filtering rather than a final live Resolve integration fix.
