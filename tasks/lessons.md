@@ -9,3 +9,4 @@
 - When real Resolve behavior contradicts a refactor that looked good in fakes, trust the integration result: in this codebase, `CreateEmptyTimeline()` + `AppendToTimeline()` is less reliable than `CreateTimelineFromClips()` and should not replace the proven path without a live end-to-end check.
 - After multiple plausible fixes fail against real Resolve behavior, stop iterating blindly and produce a crisp handoff with commit history, observed runtime facts, and the exact unresolved integration gap instead of continuing speculative changes.
 - Proxy sizing rules must preserve orientation: landscape proxies should target `1920x1080`, portrait proxies should target `1080x1920`, and tests should assert both exact dimensions instead of only checking for a positive even width.
+- Respect the user's preference for automatic commits: once a modification batch is verified, commit it without making the user ask again; keep commits small so they remain easy to revert.

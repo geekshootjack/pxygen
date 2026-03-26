@@ -22,7 +22,7 @@ Automates footage import and proxy generation in DaVinci Resolve. Given a footag
 ## What Was Done in This Session
 
 ### 1. UV Project Setup
-Converted the legacy single-file `Proxy_generator.py` into a proper UV-managed Python package.
+Converted the legacy single-file `legacy/proxy_generator_legacy.py` into a proper UV-managed Python package.
 
 - `pyproject.toml` — hatchling build backend, entry point `proxy-generator`, dev deps: pytest + ruff
 - `.python-version` — pinned to `3.14`
@@ -88,10 +88,10 @@ Legacy positional syntax (`proxy-generator <input> <output>`) still works for ba
 - `README.md` — rewritten with ProxyPilot branding (EN)
 - `README.zh.md` — full Chinese translation
 - `docs/usage.md` — complete CLI reference
-- `CLAUDE.md` — project guidance for AI coding sessions
-- `TODO.md` — tracks backlog items
+- `docs/handoff.md` — agent handoff and branch notes
+- `tasks/todo.md` — active engineering task tracker
 - `LICENSE` — added thomjiji as copyright holder alongside original author
-- `Proxy_generator.py` — legacy root script, kept until WebUI milestone validated
+- `legacy/proxy_generator_legacy.py` — legacy script kept as reference
 
 ---
 
@@ -138,20 +138,20 @@ The agreed next milestone is a **local FastAPI + HTML/JS web UI** that replaces 
 - Web form covers all current CLI flags (input path, output path, depths, codec, filter, etc.)
 - Closing the browser tab does NOT stop the server
 - Behaviour must be identical to the current CLI
-- `Proxy_generator.py` (legacy root script) to be removed once this milestone is validated
+- `legacy/proxy_generator_legacy.py` (legacy reference script) to be removed once this milestone is validated
 
 **Design constraint:** The refactored package was explicitly designed with this separation in mind. `cli.py` already separates argument parsing from business logic (`modes.py`). The WebUI should call `process_directory_mode` / `process_json_mode` directly, the same way `cli.py` does — no duplication of business logic.
 
 ---
 
-## Remaining Backlog (from TODO.md)
+## Remaining Backlog (from `tasks/todo.md`)
 
 - [ ] WebUI milestone (FastAPI + HTML/JS) — **the next big thing**
 - [ ] Ruff format-on-edit hook (uv is set up, can be wired anytime with `uv run ruff format`)
 - [ ] Integration tests (require live Resolve + test footage — needs a dedicated test machine)
 - [ ] Rename GitHub repo to `ProxyPilot` + update description
 - [ ] Update `pyproject.toml` author field
-- [ ] Remove `Proxy_generator.py` after WebUI milestone
+- [ ] Remove `legacy/proxy_generator_legacy.py` after WebUI milestone
 - [ ] Validate macOS `only-system` Python behaviour on a clean machine
 
 ---

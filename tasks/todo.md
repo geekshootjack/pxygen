@@ -2,6 +2,11 @@
 
 ## Checklist
 
+- [x] Audit root-level files and decide keep/move/delete targets
+- [x] Move reference and handoff docs out of the repo root
+- [x] Remove duplicate top-level guidance/backlog files that already have canonical homes
+- [x] Move the legacy script out of the repo root
+- [x] Verify the cleaned root layout and run a lightweight regression check
 - [x] Confirm test baseline and branch setup
 - [x] Add mode-layer tests for JSON and directory orchestration
 - [x] Add Resolve orchestration tests for preset, import, bin, and render behavior
@@ -38,6 +43,7 @@
 - Switched render job creation from `CreateTimelineFromClips()` to `CreateEmptyTimeline()` + verified custom settings + `AppendToTimeline()` so Resolve gets the timeline size before any clips are placed.
 - Added runtime checks for timeline setting application so Resolve cannot silently queue a job after rejecting custom timeline dimensions.
 - Reverted the empty-timeline append path after real Resolve showed it could create empty timelines without adding clips; render jobs now use `CreateTimelineFromClips()` again, with explicit current-timeline binding and setting verification kept in place.
+- Cleaned the repo root by moving handoff/reference material into `docs/`, moving the legacy script into `legacy/`, and deleting duplicate top-level `CLAUDE.md` / `TODO.md`.
 - Verification:
-  - `uv run pytest` -> 115 passed
+  - `uv run pytest` -> 117 passed
   - `uv run ruff check src tests` -> All checks passed
