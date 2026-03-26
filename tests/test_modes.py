@@ -142,10 +142,11 @@ class TestProcessJsonMode:
 
         output_text = "\n".join(output_lines)
         assert "JSON mode:" in output_text
-        assert "| Parameter " in output_text
-        assert "| Value " in output_text
-        assert "| Dataset" in output_text
-        assert "| File count" in output_text
+        assert "Parameter" in output_text
+        assert "Value" in output_text
+        assert "Dataset" in output_text
+        assert "File count" in output_text
+        assert "━" in output_text
 
 
 class TestProcessDirectoryMode:
@@ -235,8 +236,10 @@ class TestProcessDirectoryMode:
 
         output_text = "\n".join(output_lines)
         assert "Directory mode:" in output_text
-        assert "| Parameter " in output_text
-        assert "| Value " in output_text
+        assert "Parameter" in output_text
+        assert "Value" in output_text
         assert "Folders at depth" in output_text
-        assert "| # " in output_text
-        assert "| Folder " in output_text
+        assert "#" in output_text
+        assert "Folder" in output_text
+        assert "Sub-folders" in output_text
+        assert "━" in output_text

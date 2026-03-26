@@ -8,8 +8,13 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 from collections.abc import Callable
 from pathlib import Path
+
+from rich import box
+from rich.console import Console
+from rich.table import Table
 
 from .organize import (
     describe_folders_at_in_depth,
@@ -27,37 +32,6 @@ logger = logging.getLogger(__name__)
 OutputFn = Callable[[str], None]
 InputFn = Callable[[], str]
 
-
-def _stringify_table_cell(value: object) -> str:
-    return str(value).replace("\n", " ")
-
-
-def _render_table(headers: tuple[str, ...], rows: list[tuple[object, ...]]) -> list[str]:
-    """Render a simple ASCII table for terminal output."""
-    normalized_headers = tuple(_stringify_table_cell(header) for header in headers)
-    normalized_rows = [
-        tuple(_stringify_table_cell(cell) for cell in row)
-        for row in rows
-    ]
-    widths = [
-        max(
-            len(normalized_headers[index]),
-            *(len(row[index]) for row in normalized_rows),
-        )
-        for index in range(len(normalized_headers))
-    ]
-
-    def _format_row(row: tuple[str, ...]) -> str:
-        cells = [f" {cell:<{widths[index]}} " for index, cell in enumerate(row)]
-        return "|" + "|".join(cells) + "|"
-
-    separator = "+" + "+".join("-" * (width + 2) for width in widths) + "+"
-    lines = [separator, _format_row(normalized_headers), separator]
-    lines.extend(_format_row(row) for row in normalized_rows)
-    lines.append(separator)
-    return lines
-
-
 def _output_table(
     title: str,
     headers: tuple[str, ...],
@@ -65,7 +39,33 @@ def _output_table(
     output: OutputFn,
 ) -> None:
     output(f"\n{title}")
-    for line in _render_table(headers, rows):
+    table = Table(box=box.SIMPLE_HEAVY, show_header=True, header_style="", expand=False)
+    for index, header in enumerate(headers):
+        kwargs = {}
+        if index == 0:
+            kwargs["justify"] = "right"
+            kwargs["no_wrap"] = True
+        elif header in {"Items", "Sub-folders"}:
+            kwargs["justify"] = "right"
+            kwargs["no_wrap"] = True
+        elif header == "Parameter":
+            kwargs["no_wrap"] = True
+        table.add_column(str(header), **kwargs)
+
+    for row in rows:
+        table.add_row(*(str(cell).replace("\n", " ") for cell in row))
+
+    terminal_width = max(shutil.get_terminal_size(fallback=(160, 20)).columns, 120)
+    console = Console(
+        record=True,
+        width=terminal_width,
+        color_system=None,
+        force_terminal=False,
+        soft_wrap=False,
+        legacy_windows=False,
+    )
+    console.print(table)
+    for line in console.export_text(styles=False).splitlines():
         output(line)
 
 

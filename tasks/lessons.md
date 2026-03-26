@@ -13,3 +13,4 @@
 - Prefer short, neutral product names over overly polished branding; if a user rejects a name as awkward, propagate the rename consistently through docs, metadata, and CLI-facing text rather than leaving mixed branding behind.
 - A project rename is not complete until the internal Python package path matches too; update module directories, imports, tests, and entry points together instead of stopping at README/pyproject branding.
 - Import-boundary filters must match the actual payload shape: if directory mode hands folders to Resolve, filtering only file-path batches will not work. Cover both file inputs and directory inputs in tests.
+- For terminal tables with mixed Chinese and ASCII text, stop hand-formatting widths. Use a maintained table-rendering library so wide-character alignment is handled by the renderer instead of by brittle string math.
