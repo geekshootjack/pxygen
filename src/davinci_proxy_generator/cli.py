@@ -16,45 +16,47 @@ from .resolve import ProxyGeneratorError
 def _build_parser():
     import argparse
 
+    class _Formatter(
+        argparse.RawDescriptionHelpFormatter,
+        argparse.ArgumentDefaultsHelpFormatter,
+    ):
+        pass
+
     default_depth = 5 if platform.system() == "Darwin" else 4
 
     parser = argparse.ArgumentParser(
         prog="proxy-generator",
         description=(
             "DaVinci Resolve Proxy Generator v1.5.2\n\n"
-            "Two modes:\n"
-            "  Directory mode  (-f)  Import footage directly from a folder hierarchy.\n"
-            "  JSON mode       (-j)  Re-generate missing proxies from a file-comparison JSON."
+            "Pass a footage folder or a JSON comparison file to --input;\n"
+            "the mode is detected automatically."
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=_Formatter,
         epilog=(
             "Examples:\n"
-            "  proxy-generator -f /Volumes/SSD/Footage -p /Volumes/SSD/Proxy -i 4 -o 5\n"
-            "  proxy-generator -j comparison.json -p /Volumes/SSD/Proxy -d 1 -i 4 -o 5\n"
-            "  proxy-generator -f /Volumes/SSD/Footage -p /Proxy -i 4 -o 5 --select\n"
-            '  proxy-generator -f /Volumes/SSD/Footage -p /Proxy -i 4 -o 5 --filter "Day1,Day2"\n'
+            "  proxy-generator -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy\n"
+            "  proxy-generator -i comparison.json -o /Volumes/SSD/Proxy --group 2\n"
+            "  proxy-generator -i /Volumes/SSD/Footage -o /Proxy --select\n"
+            '  proxy-generator -i /Volumes/SSD/Footage -o /Proxy --filter "Day1,Day2"\n'
         ),
     )
 
-    mode_group = parser.add_mutually_exclusive_group()
-    mode_group.add_argument("-f", "--footage", help="Footage folder path (Directory mode)")
-    mode_group.add_argument("-j", "--json", help="Path to comparison JSON file (JSON mode)")
-
+    parser.add_argument("-i", "--input", help="Footage folder or JSON comparison file")
+    parser.add_argument("-o", "--output", help="Proxy output folder")
     parser.add_argument(
-        "-d", "--dataset",
+        "-n", "--in-depth",
+        type=int, default=default_depth,
+        help="Depth of shooting-day folders",
+    )
+    parser.add_argument(
+        "-d", "--out-depth",
+        type=int, default=default_depth,
+        help="Depth of camera-reel folders",
+    )
+    parser.add_argument(
+        "-g", "--group",
         type=int, choices=[1, 2], default=1,
-        help="JSON mode: which group to use (default: 1)",
-    )
-    parser.add_argument("-p", "--proxy", help="Proxy output folder path")
-    parser.add_argument(
-        "-i", "--in-depth",
-        type=int, default=default_depth,
-        help=f"Depth of shooting-day folders (default: {default_depth})",
-    )
-    parser.add_argument(
-        "-o", "--out-depth",
-        type=int, default=default_depth,
-        help=f"Depth of camera-reel folders (default: {default_depth})",
+        help="JSON mode: which comparison group to use",
     )
 
     selection_group = parser.add_mutually_exclusive_group()
@@ -63,7 +65,7 @@ def _build_parser():
         help="Interactively select which folders to process",
     )
     selection_group.add_argument(
-        "--filter", type=str,
+        "-f", "--filter", type=str,
         help="Comma-separated folder names to process (e.g. 'Day1,Day2')",
     )
 
@@ -72,10 +74,10 @@ def _build_parser():
         help="Generate proxies without burn-in overlays",
     )
     parser.add_argument(
-        "-C", "--codec",
+        "-k", "--codec",
         choices=["auto", "prores", "h265", "hevc", "265"],
         default="auto",
-        help="Render codec override (default: auto — h265 for ≤4 audio ch, ProRes otherwise)",
+        help="Render codec (h265 for ≤4 audio ch, ProRes otherwise)",
     )
 
     # Legacy positional arguments kept for backward compatibility
@@ -99,37 +101,32 @@ def main() -> None:
     )
 
     try:
-        if args.json:
-            if not args.proxy:
-                parser.error("JSON mode requires -p/--proxy")
-            process_json_mode(
-                args.json,
-                clean_path_input(args.proxy),
-                args.dataset,
-                args.in_depth,
-                args.out_depth,
-                **shared,
-            )
-
-        elif args.footage:
-            if not args.proxy:
-                parser.error("Directory mode requires -p/--proxy")
-            process_directory_mode(
-                clean_path_input(args.footage),
-                clean_path_input(args.proxy),
-                args.in_depth,
-                args.out_depth,
-                **shared,
-            )
+        if args.input:
+            if not args.output:
+                parser.error("requires -o/--output")
+            input_path = clean_path_input(args.input)
+            output_path = clean_path_input(args.output)
+            if is_json_file(input_path):
+                process_json_mode(
+                    input_path, output_path,
+                    args.group, args.in_depth, args.out_depth,
+                    **shared,
+                )
+            else:
+                process_directory_mode(
+                    input_path, output_path,
+                    args.in_depth, args.out_depth,
+                    **shared,
+                )
 
         elif len(args.args) >= 2:
             # Legacy positional: <footage_or_json> <proxy>
             first = clean_path_input(args.args[0])
-            proxy_path = clean_path_input(args.args[1])
+            output_path = clean_path_input(args.args[1])
             if is_json_file(first):
-                process_json_mode(first, proxy_path, args.dataset, args.in_depth, args.out_depth, **shared)
+                process_json_mode(first, output_path, args.group, args.in_depth, args.out_depth, **shared)
             else:
-                process_directory_mode(first, proxy_path, args.in_depth, args.out_depth, **shared)
+                process_directory_mode(first, output_path, args.in_depth, args.out_depth, **shared)
 
         else:
             parser.print_help()
