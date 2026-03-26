@@ -117,15 +117,16 @@ CLI (cli.py)
 
 ### Depth model
 
-`--in-depth` = absolute path depth of the shooting-day folder (the "input grouping level").
-`--out-depth` = absolute path depth of the camera-reel folder (the "output subfolder level").
+`--in-depth` = how many levels below the chosen input folder count as one footage group.
+`--out-depth` = how many levels below the chosen input folder should still be preserved as subfolders.
 
-macOS default: 5. Windows default: 4 (drive letter counts as one component).
+macOS default: 5. Windows default: 4.
 
-Example (macOS, depth 5):
+Example:
 ```
-/Volumes/SSD/Footage/Day1/CamA   ← out-depth 5
-                    ^^^^^ ← in-depth 4 (shooting day)
+/Volumes/SSD/Footage
+└─ Day1        ← in-depth 1
+   └─ CamA     ← out-depth 2
 ```
 
 ---

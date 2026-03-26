@@ -35,19 +35,16 @@ InputFn = Callable[[], str]
 class _DepthSpec:
     requested: int
     resolved: int
-    mode: str
 
 
 def _common_parent_depth(paths: list[str]) -> int:
-    """Return the shared parent-directory depth across file paths."""
-    parent_parts_lists = [path_parts(path)[:-1] for path in paths if path_parts(path)]
-    if not parent_parts_lists:
-        return 0
-    if len({tuple(parts) for parts in parent_parts_lists}) < 2:
+    """Return the common leading path components across *paths*."""
+    if not paths:
         return 0
 
-    prefix = list(parent_parts_lists[0])
-    for parts in parent_parts_lists[1:]:
+    prefix = list(path_parts(paths[0]))
+    for raw_path in paths[1:]:
+        parts = path_parts(raw_path)
         max_common = min(len(prefix), len(parts))
         common_length = 0
         while common_length < max_common and prefix[common_length] == parts[common_length]:
@@ -58,31 +55,35 @@ def _common_parent_depth(paths: list[str]) -> int:
     return len(prefix)
 
 
-def _normalize_depth(root_depth: int, depth: int) -> _DepthSpec:
-    """Interpret *depth* relative to the input root when possible.
+def _infer_json_root_depth(paths: list[str], out_depth: int) -> int:
+    """Infer a JSON root depth that preserves *out_depth* folder levels."""
+    if out_depth < 0:
+        raise ValueError("Depth values must be ≥ 0")
 
-    Rules:
-    - ``0`` targets the input root itself.
-    - Positive values smaller than the input-root depth are treated as levels
-      beneath the input root (``1`` = immediate children).
-    - Values greater than or equal to the input-root depth are preserved as
-      legacy absolute depths for backward compatibility.
-    """
+    root_candidates: list[str] = []
+    for raw_path in paths:
+        parent_parts = path_parts(raw_path)[:-1]
+        if out_depth == 0:
+            root_parts = parent_parts
+        elif len(parent_parts) > out_depth:
+            root_parts = parent_parts[:-out_depth]
+        else:
+            root_parts = []
+        root_candidates.append(format_path_parts(root_parts))
+
+    return _common_parent_depth(root_candidates)
+
+
+def _normalize_depth(root_depth: int, depth: int) -> _DepthSpec:
+    """Interpret *depth* as a level relative to the input root."""
     if depth < 0:
         raise ValueError("Depth values must be ≥ 0")
-    if root_depth <= 0:
-        return _DepthSpec(requested=depth, resolved=depth, mode="absolute")
-    if depth == 0:
-        return _DepthSpec(requested=depth, resolved=root_depth, mode="relative")
-    if depth < root_depth:
-        return _DepthSpec(requested=depth, resolved=root_depth + depth, mode="relative")
-    return _DepthSpec(requested=depth, resolved=depth, mode="absolute")
+    resolved = root_depth + depth if root_depth > 0 else depth
+    return _DepthSpec(requested=depth, resolved=resolved)
 
 
 def _format_depth_value(spec: _DepthSpec) -> str:
-    if spec.mode == "relative":
-        return f"{spec.requested} (relative -> absolute {spec.resolved})"
-    return f"{spec.requested} (legacy absolute)"
+    return str(spec.requested)
 
 
 def _print_folder_options(options, in_depth: int, output: OutputFn) -> None:
@@ -139,7 +140,7 @@ def _collect_directories_at_depth(root: Path, target_depth: int) -> list[Path]:
 
 
 def list_footage_folders(footage_path: str, depth: int) -> list[str]:
-    """Return folder paths at the requested depth semantics within *footage_path*."""
+    """Return folders at *depth* levels below *footage_path*."""
     root_depth = len(path_parts(footage_path))
     resolved_depth = _normalize_depth(root_depth, depth).resolved
     return [str(p) for p in _collect_directories_at_depth(Path(footage_path), resolved_depth)]
@@ -177,10 +178,8 @@ def process_json_mode(
         json_path: Path to the JSON comparison file.
         proxy_path: Root output directory for proxies.
         dataset: Which group to use from the comparison (1 or 2).
-        in_depth: Folder level relative to the inferred footage root, while
-            still accepting legacy absolute-depth values.
-        out_depth: Batch level relative to the inferred footage root, while
-            still accepting legacy absolute-depth values.
+        in_depth: Folder level relative to the inferred footage root.
+        out_depth: Batch level relative to the inferred footage root.
         clean_image: Skip burn-in overlay when ``True``.
         filter_mode: ``'select'`` or ``'filter'`` or ``None``.
         filter_list: Comma-separated folder names (only used when
@@ -231,7 +230,7 @@ def process_json_mode(
     if not file_list:
         raise ProxyGeneratorError(f"No files found in group{dataset}")
 
-    root_depth = _common_parent_depth(file_list)
+    root_depth = _infer_json_root_depth(file_list, out_depth)
     in_depth_spec = _normalize_depth(root_depth, in_depth)
     out_depth_spec = _normalize_depth(root_depth, out_depth)
     if out_depth_spec.resolved < in_depth_spec.resolved:
@@ -337,10 +336,8 @@ def process_directory_mode(
     Args:
         footage_path: Root footage directory.
         proxy_path: Root output directory for proxies.
-        in_depth: Folder level relative to the provided footage root, while
-            still accepting legacy absolute-depth values.
-        out_depth: Batch level relative to the provided footage root, while
-            still accepting legacy absolute-depth values.
+        in_depth: Folder level relative to the provided footage root.
+        out_depth: Batch level relative to the provided footage root.
         clean_image: Skip burn-in overlay when ``True``.
         filter_mode: ``'select'`` or ``'filter'`` or ``None``.
         filter_list: Comma-separated folder names (only used when

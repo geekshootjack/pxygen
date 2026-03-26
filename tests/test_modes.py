@@ -7,7 +7,6 @@ from unittest.mock import patch
 import pytest
 
 from pxygen.modes import list_footage_folders, process_directory_mode, process_json_mode
-from pxygen.paths import path_parts
 from pxygen.plan import ResolveExecutionPlan
 from pxygen.resolve import ProxyGeneratorError
 
@@ -37,8 +36,8 @@ class TestProcessJsonMode:
                 str(json_path),
                 "/proxy",
                 2,
-                4,
-                5,
+                1,
+                2,
                 codec="prores",
                 clean_image=True,
             )
@@ -81,8 +80,8 @@ class TestProcessJsonMode:
                 str(json_path),
                 "/proxy",
                 1,
-                4,
-                5,
+                1,
+                2,
                 filter_mode="filter",
                 filter_list="Day2",
             )
@@ -110,8 +109,8 @@ class TestProcessJsonMode:
                 str(json_path),
                 "/proxy",
                 1,
-                4,
-                5,
+                1,
+                2,
                 filter_mode="filter",
                 filter_list="Day99",
             )
@@ -135,8 +134,8 @@ class TestProcessJsonMode:
                 str(json_path),
                 "/proxy",
                 1,
-                4,
-                5,
+                1,
+                2,
                 output=output_lines.append,
             )
 
@@ -169,11 +168,37 @@ class TestProcessJsonMode:
                 str(json_path),
                 "/proxy",
                 1,
-                4,
-                5,
+                1,
+                2,
             )
 
         assert mock_print.called
+
+    def test_single_parent_json_still_groups_by_parent_folder(self, tmp_path):
+        json_path = tmp_path / "comparison.json"
+        json_path.write_text(
+            json.dumps(
+                {
+                    "files_only_in_group1": [
+                        "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
+                        "/Volumes/SSD/Footage/Day1/CamA/clip2.mov",
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
+            process_json_mode(
+                str(json_path),
+                "/proxy",
+                1,
+                1,
+                1,
+            )
+
+        plan = mock_execute.call_args.args[0]
+        assert [folder.footage_folder_name for folder in plan.footage_folders] == ["CamA"]
 
     def test_relative_depths_group_json_paths_from_common_root(self, tmp_path):
         json_path = tmp_path / "comparison.json"
@@ -220,19 +245,24 @@ class TestProcessDirectoryMode:
             str(footage_root / "Day2"),
         ]
 
+    def test_list_footage_folders_no_longer_treats_depth_as_absolute(self, tmp_path):
+        footage_root = tmp_path / "footage"
+        (footage_root / "Day1").mkdir(parents=True)
+
+        assert list_footage_folders(str(footage_root), 4) == []
+
     def test_in_depth_equals_out_depth_groups_input_folders(self, tmp_path):
         footage_root = tmp_path / "footage"
         (footage_root / "Day1").mkdir(parents=True)
         (footage_root / "Day2").mkdir(parents=True)
         day1 = footage_root / "Day1"
-        in_depth = len(path_parts(day1))
 
         with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
             process_directory_mode(
                 str(footage_root),
                 "/proxy",
-                in_depth,
-                in_depth,
+                1,
+                1,
                 filter_mode="filter",
                 filter_list="Day1",
             )
@@ -248,11 +278,9 @@ class TestProcessDirectoryMode:
         shallow_leaf = footage_root / "Day1" / "CamA"
         shallow_leaf.mkdir(parents=True)
         day1 = footage_root / "Day1"
-        in_depth = len(path_parts(day1))
-        out_depth = in_depth + 2
 
         with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
-            process_directory_mode(str(footage_root), "/proxy", in_depth, out_depth)
+            process_directory_mode(str(footage_root), "/proxy", 1, 3)
 
         plan = mock_execute.call_args.args[0]
         assert [folder.footage_folder_path for folder in plan.footage_folders] == [str(day1)]
@@ -263,10 +291,7 @@ class TestProcessDirectoryMode:
         footage_root = tmp_path / "footage"
         (footage_root / "Day1" / "CamA").mkdir(parents=True)
         (footage_root / "Day2" / "CamA").mkdir(parents=True)
-        day1 = footage_root / "Day1"
         day2 = footage_root / "Day2"
-        in_depth = len(path_parts(day1))
-        out_depth = in_depth + 1
 
         with patch("pxygen.modes.execute_resolve_plan") as mock_execute, patch(
             "builtins.input", return_value="2"
@@ -274,8 +299,8 @@ class TestProcessDirectoryMode:
             process_directory_mode(
                 str(footage_root),
                 "/proxy",
-                in_depth,
-                out_depth,
+                1,
+                2,
                 filter_mode="select",
             )
 
@@ -309,9 +334,6 @@ class TestProcessDirectoryMode:
         footage_root = tmp_path / "footage"
         (footage_root / "Day1" / "CamA").mkdir(parents=True)
         (footage_root / "Day2" / "CamA").mkdir(parents=True)
-        day1 = footage_root / "Day1"
-        in_depth = len(path_parts(day1))
-        out_depth = in_depth + 1
         output_lines: list[str] = []
 
         with (
@@ -321,8 +343,8 @@ class TestProcessDirectoryMode:
             process_directory_mode(
                 str(footage_root),
                 "/proxy",
-                in_depth,
-                out_depth,
+                1,
+                2,
                 filter_mode="select",
                 output=output_lines.append,
             )

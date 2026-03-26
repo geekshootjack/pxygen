@@ -52,12 +52,12 @@ def _build_parser():
     parser.add_argument(
         "-n", "--in-depth",
         type=int, default=default_depth,
-        help="Depth of shooting-day folders",
+        help="Levels below the input folder to treat as one footage group",
     )
     parser.add_argument(
         "-d", "--out-depth",
         type=int, default=default_depth,
-        help="Depth of camera-reel folders",
+        help="Levels below the input folder to preserve as subfolders",
     )
     parser.add_argument(
         "-g", "--group",

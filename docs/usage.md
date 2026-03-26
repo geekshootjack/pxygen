@@ -13,7 +13,7 @@ pxygen -i INPUT -o OUTPUT [options]
 Walks a footage folder tree, collects folders at the specified depth, imports them into DaVinci Resolve, and queues render jobs.
 
 ```sh
-pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5
+pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 1 -d 2
 ```
 
 ### JSON Mode
@@ -21,7 +21,7 @@ pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5
 Re-generates missing or incomplete proxies using file paths from a [File_Compare](https://github.com/UserProjekt/File_Compare) JSON result.
 
 ```sh
-pxygen -i comparison.json -o /Volumes/SSD/Proxy -g 1 -n 4 -d 5
+pxygen -i comparison.json -o /Volumes/SSD/Proxy -g 1 -n 1 -d 2
 ```
 
 ---
@@ -43,8 +43,6 @@ Depth values now support a more intuitive relative interpretation:
 - `1` means the first level below the input folder
 - `2` means the second level below the input folder
 
-Legacy absolute depths are still accepted for backward compatibility, so existing commands such as `-n 4 -d 5` continue to work.
-
 | Flag | Default (macOS / other) | Description |
 |------|-------------------------|-------------|
 | `-n, --in-depth N` | 5 / 4 | Depth of the shooting-day folders |
@@ -59,7 +57,6 @@ Legacy absolute depths are still accepted for backward compatibility, so existin
 | `2` | `A001` |
 
 So `-n 1 -d 2` means: group by Day, include camera reels as subfolders.
-Legacy `-n 4 -d 5` still resolves to the same structure when used with that input root.
 
 ### Folder Selection *(mutually exclusive)*
 
