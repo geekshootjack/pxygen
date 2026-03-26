@@ -96,6 +96,11 @@ def _build_parser():
         help="Optional file path for detailed runtime logs",
     )
     parser.add_argument(
+        "--preview-structure",
+        action="store_true",
+        help="Show input/output tree preview and exit without running Resolve",
+    )
+    parser.add_argument(
         "--web", action="store_true",
         help="Launch the WebUI in a browser (no -i/-o required)",
     )
@@ -129,6 +134,7 @@ def main() -> None:
         filter_mode=filter_mode,
         filter_list=filter_list,
         codec=args.codec,
+        preview_only=args.preview_structure,
         input_func=presenter.read_line,
         output=presenter.show,
         confirm_render=lambda: presenter.confirm(
