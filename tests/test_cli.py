@@ -76,7 +76,7 @@ class TestParser:
         assert args.out_depth == expected_depth
         assert args.group == 1
         assert args.codec == "auto"
-        assert args.log_level == "info"
+        assert args.log_level == "warning"
         assert args.clean_image is False
         assert args.select is False
         assert args.filter is None
@@ -150,7 +150,7 @@ class TestDispatch:
             self._run(["-i", str(footage), "-o", "/proxy"])
             mock_dir.assert_called_once()
             mock_json.assert_not_called()
-            mock_logging.assert_called_once_with("info", None)
+            mock_logging.assert_called_once_with("warning", None)
             kwargs = mock_dir.call_args.kwargs
             assert callable(kwargs["input_func"])
             assert callable(kwargs["output"])
@@ -166,7 +166,7 @@ class TestDispatch:
         ):
             self._run(["-i", str(footage), "-o", "/proxy", "--log-file", str(log_path)])
 
-        mock_logging.assert_called_once_with("info", str(log_path))
+        mock_logging.assert_called_once_with("warning", str(log_path))
 
     def test_json_mode_dispatched(self, tmp_path):
         json_file = tmp_path / "comparison.json"

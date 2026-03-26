@@ -371,9 +371,9 @@ def process_directory_mode(
         folder_paths = sorted(targets_by_input)
         output_table(
             f"Folders at depth {in_depth}:",
-            ("#", "Folder", "Sub-folders"),
+            ("#", "Folder"),
             [
-                (index, folder_path, len(targets_by_input[folder_path]))
+                (index, folder_path)
                 for index, folder_path in enumerate(folder_paths, 1)
             ],
             output,

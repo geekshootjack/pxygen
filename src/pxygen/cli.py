@@ -88,7 +88,7 @@ def _build_parser():
     parser.add_argument(
         "--log-level",
         choices=["debug", "info", "warning", "error"],
-        default="info",
+        default="warning",
         help="Logging verbosity",
     )
     parser.add_argument(

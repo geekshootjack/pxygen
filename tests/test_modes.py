@@ -268,5 +268,5 @@ class TestProcessDirectoryMode:
         assert "Folders at depth" in output_text
         assert "#" in output_text
         assert "Folder" in output_text
-        assert "Sub-folders" in output_text
+        assert "Sub-folders" not in output_text
         assert "━" in output_text

@@ -17,3 +17,4 @@
 - When a TUI pattern is already represented as a structured table in one phase, extend that same table treatment to later repeated summaries instead of falling back to line-by-line logs; reuse one shared renderer so presentation stays consistent.
 - Do not let `logger.info` become an accidental UI transport. If the terminal has real presentation requirements, add a dedicated presenter/output layer and keep logging as logging.
 - When using `rich` as an internal renderer, never let the helper both `console.print(...)` to stdout and replay the rendered text through a callback; render into an in-memory buffer and emit through exactly one output path.
+- If a table column label reflects internal planner semantics rather than what a human operator would naturally infer from the wording, either rename it to the real meaning or remove it. Do not ship labels like `Sub-folders` when the value is actually an internal batch count.
