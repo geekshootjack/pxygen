@@ -20,12 +20,15 @@ dev = [
     "ruff>=0.9",
 ]
 
+[tool.uv]
+python-preference = "only-system"
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
