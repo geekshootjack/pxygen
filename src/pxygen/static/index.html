@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pxygen</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #1a1a1a;
+  --surface: #242424;
+  --border: #363636;
+  --text: #d0d0d0;
+  --muted: #7a7a7a;
+  --accent: #4ade80;
+  --error: #f87171;
+  --warning: #fbbf24;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+}
+body { background: var(--bg); color: var(--text); min-height: 100vh; }
+
+header {
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+header h1 { font-size: 1rem; font-weight: 700; color: var(--accent); letter-spacing: -0.01em; }
+header .subtitle { font-size: 0.78rem; color: var(--muted); }
+
+.container { max-width: 860px; margin: 0 auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+
+section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px 20px;
+}
+section h2 {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 14px;
+}
+
+.field { margin-bottom: 12px; }
+.field:last-child { margin-bottom: 0; }
+.field label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+.field input[type=text], .field input[type=number], .field select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 7px 11px;
+  border-radius: 5px;
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.12s;
+  font-family: inherit;
+}
+.field input[type=text]:focus,
+.field input[type=number]:focus,
+.field select:focus { border-color: var(--accent); }
+.field select { cursor: pointer; }
+
+.row { display: flex; gap: 12px; }
+.row .field { flex: 1; margin-bottom: 0; }
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 0;
+}
+.checkbox-label input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); flex-shrink: 0; }
+
+button {
+  padding: 8px 16px;
+  border-radius: 5px;
+  border: none;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.12s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+button:disabled { opacity: 0.38; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: #111; }
+.btn-primary:hover:not(:disabled) { opacity: 0.88; }
+.btn-secondary { background: var(--border); color: var(--text); }
+.btn-secondary:hover:not(:disabled) { opacity: 0.8; }
+.btn-danger { background: var(--error); color: #111; }
+.btn-danger:hover:not(:disabled) { opacity: 0.85; }
+
+.select-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.select-controls a { color: var(--accent); cursor: pointer; text-decoration: none; }
+.select-controls a:hover { text-decoration: underline; }
+
+.folder-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  margin-bottom: 14px;
+}
+.folder-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.81rem;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+.folder-item:last-child { border-bottom: none; }
+.folder-item:hover { background: var(--surface); }
+.folder-item input[type=checkbox] { accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
+.folder-item label { cursor: pointer; flex: 1; display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.folder-item .name { font-weight: 600; color: var(--text); white-space: nowrap; }
+.folder-item .parent { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.76rem; }
+
+.actions { display: flex; gap: 10px; margin-top: 16px; align-items: center; flex-wrap: wrap; }
+
+.msg {
+  font-size: 0.81rem;
+  padding: 8px 12px;
+  border-radius: 5px;
+  margin-top: 10px;
+}
+.msg-error { background: #3a1a1a; color: var(--error); border: 1px solid #5a2a2a; }
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.terminal-header h2 { margin: 0; }
+
+.terminal {
+  background: #0e0e0e;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 12px 14px;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.8rem;
+  line-height: 1.65;
+  height: 360px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.t-normal { color: #9ecf9e; }
+.t-error { color: var(--error); }
+.t-warn { color: var(--warning); }
+.t-dim { color: var(--muted); }
+
+.confirm-bar {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #282010;
+  border: 1px solid var(--warning);
+  border-radius: 5px;
+  margin-top: 10px;
+  font-size: 0.88rem;
+}
+.confirm-bar.visible { display: flex; }
+.confirm-bar span { flex: 1; }
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.badge-running { background: #152a1e; color: var(--accent); }
+.badge-done { background: #102010; color: #86efac; }
+.badge-error { background: #2a1010; color: var(--error); }
+.badge-waiting { background: #2a2010; color: var(--warning); }
+</style>
+</head>
+<body>
+<header>
+  <h1>pxygen</h1>
+  <span class="subtitle">DaVinci Resolve Proxy Generator</span>
+</header>
+<div class="container">
+
+  <!-- Step 1: Paths & Discovery -->
+  <section id="paths-section">
+    <h2>Paths</h2>
+    <div class="field">
+      <label for="footage-path">Footage folder</label>
+      <input id="footage-path" type="text" placeholder="/Volumes/SSD/Footage" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="field">
+      <label for="proxy-path">Proxy output folder</label>
+      <input id="proxy-path" type="text" placeholder="/Volumes/SSD/Proxy" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="in-depth">In depth <span style="color:var(--muted);font-size:0.75rem">(shooting-day folders)</span></label>
+        <input id="in-depth" type="number" value="5" min="1" max="20">
+      </div>
+      <div class="field">
+        <label for="out-depth">Out depth <span style="color:var(--muted);font-size:0.75rem">(camera-reel folders)</span></label>
+        <input id="out-depth" type="number" value="5" min="1" max="20">
+      </div>
+    </div>
+    <div id="discover-error" class="msg msg-error" style="display:none"></div>
+    <div class="actions">
+      <button class="btn-primary" onclick="discoverFolders(this)">Discover Folders</button>
+    </div>
+  </section>
+
+  <!-- Step 2: Configure & Run -->
+  <section id="configure-section" style="display:none">
+    <h2>Configure</h2>
+    <div class="select-controls">
+      <span id="folder-count"></span>
+      <a onclick="selectAll(true)">Select all</a>
+      <a onclick="selectAll(false)">Deselect all</a>
+    </div>
+    <div id="folder-list" class="folder-list"></div>
+    <div class="row" style="margin-bottom:12px">
+      <div class="field" style="margin-bottom:0">
+        <label for="codec">Codec</label>
+        <select id="codec">
+          <option value="auto">auto (h265 ≤4ch audio, ProRes otherwise)</option>
+          <option value="prores">ProRes</option>
+          <option value="h265">H.265 / HEVC</option>
+        </select>
+      </div>
+    </div>
+    <label class="checkbox-label">
+      <input type="checkbox" id="clean-image">
+      Clean image — skip burn-in overlays
+    </label>
+    <div id="run-error" class="msg msg-error" style="display:none"></div>
+    <div class="actions">
+      <button class="btn-primary" onclick="runJob(this)">Run</button>
+      <button class="btn-secondary" onclick="resetToStep1()">Back</button>
+    </div>
+  </section>
+
+  <!-- Step 3: Output -->
+  <section id="output-section" style="display:none">
+    <div class="terminal-header">
+      <h2>Output</h2>
+      <span id="status-badge" class="status-badge badge-running">running</span>
+    </div>
+    <div id="terminal" class="terminal"></div>
+    <div id="confirm-bar" class="confirm-bar">
+      <span>All render jobs added. Start rendering now?</span>
+      <button class="btn-primary" onclick="confirmRender(true)">Yes, start rendering</button>
+      <button class="btn-danger" onclick="confirmRender(false)">No, skip</button>
+    </div>
+    <div class="actions">
+      <button class="btn-secondary" onclick="resetToStep1()">New run</button>
+    </div>
+  </section>
+
+</div>
+<script>
+'use strict';
+
+let currentJobId = null;
+let discoveredFolders = [];
+
+// Sync out-depth to in-depth unless user has changed out-depth manually
+const inDepthEl = document.getElementById('in-depth');
+const outDepthEl = document.getElementById('out-depth');
+inDepthEl.addEventListener('input', () => {
+  if (!outDepthEl.dataset.modified) outDepthEl.value = inDepthEl.value;
+});
+outDepthEl.addEventListener('input', () => { outDepthEl.dataset.modified = '1'; });
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+async function discoverFolders(btn) {
+  const footagePath = document.getElementById('footage-path').value.trim();
+  const inDepth = parseInt(inDepthEl.value, 10);
+  const errEl = document.getElementById('discover-error');
+  errEl.style.display = 'none';
+
+  if (!footagePath) {
+    showError(errEl, 'Please enter a footage folder path.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Discovering…';
+
+  try {
+    const res = await fetch('/api/discover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input_path: footagePath, in_depth: inDepth }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showError(errEl, data.detail || 'Discovery failed.'); return; }
+    if (!data.folders.length) { showError(errEl, `No folders found at depth ${inDepth}.`); return; }
+
+    discoveredFolders = data.folders;
+    renderFolderList(discoveredFolders);
+
+    const sec = document.getElementById('configure-section');
+    sec.style.display = 'block';
+    sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (e) {
+    showError(errEl, 'Network error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Discover Folders';
+  }
+}
+
+function renderFolderList(folders) {
+  const el = document.getElementById('folder-list');
+  el.innerHTML = '';
+  folders.forEach((p, i) => {
+    const norm = p.replace(/\\/g, '/');
+    const parts = norm.split('/');
+    const name = parts[parts.length - 1] || norm;
+    const parent = parts.slice(0, -1).join('/');
+    const div = document.createElement('div');
+    div.className = 'folder-item';
+    div.innerHTML = `
+      <input type="checkbox" id="f${i}" value="${esc(p)}" checked>
+      <label for="f${i}">
+        <span class="name">${esc(name)}</span>
+        <span class="parent">${esc(parent)}</span>
+      </label>`;
+    el.appendChild(div);
+  });
+  const countEl = document.getElementById('folder-count');
+  countEl.textContent = `${folders.length} folder${folders.length !== 1 ? 's' : ''} found`;
+}
+
+function selectAll(checked) {
+  document.querySelectorAll('#folder-list input[type=checkbox]').forEach(cb => { cb.checked = checked; });
+}
+
+async function runJob(btn) {
+  const errEl = document.getElementById('run-error');
+  errEl.style.display = 'none';
+
+  const selected = [...document.querySelectorAll('#folder-list input[type=checkbox]:checked')].map(cb => cb.value);
+  if (!selected.length) { showError(errEl, 'Select at least one folder.'); return; }
+
+  const payload = {
+    footage_path: document.getElementById('footage-path').value.trim(),
+    proxy_path: document.getElementById('proxy-path').value.trim(),
+    in_depth: parseInt(inDepthEl.value, 10),
+    out_depth: parseInt(outDepthEl.value, 10),
+    codec: document.getElementById('codec').value,
+    clean_image: document.getElementById('clean-image').checked,
+    selected_folders: selected.length === discoveredFolders.length ? null : selected,
+  };
+
+  if (!payload.proxy_path) { showError(errEl, 'Please enter a proxy output folder path.'); return; }
+
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) { showError(errEl, data.detail || 'Failed to start job.'); btn.disabled = false; return; }
+
+    currentJobId = data.job_id;
+    showOutputSection();
+    startStreaming(currentJobId);
+  } catch (e) {
+    showError(errEl, 'Network error: ' + e.message);
+    btn.disabled = false;
+  }
+}
+
+function showOutputSection() {
+  const term = document.getElementById('terminal');
+  term.innerHTML = '';
+  document.getElementById('confirm-bar').classList.remove('visible');
+  setStatus('running', 'running');
+
+  const sec = document.getElementById('output-section');
+  sec.style.display = 'block';
+  sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function startStreaming(jobId) {
+  const es = new EventSource(`/api/jobs/${jobId}/stream`);
+  const term = document.getElementById('terminal');
+
+  es.addEventListener('message', e => {
+    appendLine(term, e.data, lineClass(e.data));
+  });
+
+  es.addEventListener('awaiting_confirm', () => {
+    document.getElementById('confirm-bar').classList.add('visible');
+    setStatus('awaiting_confirm', 'waiting');
+    document.getElementById('confirm-bar').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  es.addEventListener('done', () => {
+    es.close();
+    const cur = document.getElementById('status-badge').dataset.status;
+    if (cur !== 'error') setStatus('done', 'done');
+  });
+
+  es.onerror = () => {
+    es.close();
+    appendLine(term, '[stream closed]', 't-dim');
+  };
+}
+
+function lineClass(text) {
+  const l = text.toLowerCase();
+  if (l.startsWith('error') || l.includes(': error')) return 't-error';
+  if (l.includes('warning') || l.includes('warn')) return 't-warn';
+  return 't-normal';
+}
+
+function appendLine(term, text, cls) {
+  if (!text) return;
+  const span = document.createElement('span');
+  span.className = cls || 't-normal';
+  span.textContent = text + '\n';
+  term.appendChild(span);
+  term.scrollTop = term.scrollHeight;
+}
+
+function setStatus(key, label) {
+  const el = document.getElementById('status-badge');
+  el.dataset.status = key;
+  el.textContent = label;
+  el.className = 'status-badge';
+  const map = { running: 'badge-running', done: 'badge-done', error: 'badge-error', awaiting_confirm: 'badge-waiting' };
+  el.classList.add(map[key] || 'badge-running');
+}
+
+async function confirmRender(proceed) {
+  if (!currentJobId) return;
+  document.getElementById('confirm-bar').classList.remove('visible');
+  const term = document.getElementById('terminal');
+
+  try {
+    await fetch(`/api/jobs/${currentJobId}/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ proceed }),
+    });
+    setStatus('running', 'running');
+    appendLine(term, proceed ? '> Starting render...' : '> Render skipped.', 't-dim');
+  } catch (e) {
+    appendLine(term, 'Error sending confirmation: ' + e.message, 't-error');
+  }
+}
+
+function resetToStep1() {
+  currentJobId = null;
+  discoveredFolders = [];
+  document.getElementById('configure-section').style.display = 'none';
+  document.getElementById('output-section').style.display = 'none';
+  document.getElementById('discover-error').style.display = 'none';
+  document.getElementById('run-error').style.display = 'none';
+  document.getElementById('folder-list').innerHTML = '';
+  outDepthEl.removeAttribute('data-modified');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showError(el, msg) {
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+</script>
+</body>
+</html>

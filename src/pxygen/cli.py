@@ -95,6 +95,14 @@ def _build_parser():
         "--log-file",
         help="Optional file path for detailed runtime logs",
     )
+    parser.add_argument(
+        "--web", action="store_true",
+        help="Launch the WebUI in a browser (no -i/-o required)",
+    )
+    parser.add_argument(
+        "--port", type=int, default=8321,
+        help="Port for the WebUI server",
+    )
 
     # Legacy positional arguments kept for backward compatibility
     parser.add_argument("args", nargs="*", help=argparse.SUPPRESS)
@@ -107,6 +115,11 @@ def main() -> None:
     args = parser.parse_args()
     configure_logging(args.log_level, args.log_file)
     presenter = ConsolePresenter()
+
+    if args.web:
+        from .server import launch_server
+        launch_server(args.port)
+        return
 
     filter_mode = "select" if args.select else ("filter" if args.filter else None)
     filter_list = args.filter if filter_mode == "filter" else None

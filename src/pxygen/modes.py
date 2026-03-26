@@ -83,6 +83,11 @@ def _collect_directories_at_depth(root: Path, target_depth: int) -> list[Path]:
     return matches
 
 
+def list_footage_folders(footage_path: str, depth: int) -> list[str]:
+    """Return folder paths (as strings) at *depth* within *footage_path*."""
+    return [str(p) for p in _collect_directories_at_depth(Path(footage_path), depth)]
+
+
 def _collect_directory_tree(root: Path) -> list[Path]:
     """Return *root* and all descendant directories in traversal order."""
     directories: list[Path] = []
