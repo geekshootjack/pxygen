@@ -276,6 +276,45 @@ class TestProcessFilesInResolve:
         assert project.render_job_count == 1
         assert [timeline.name for timeline in media_pool.timelines] == ["0001-3840x2160"]
 
+    def test_expands_directory_inputs_and_skips_jpgs_before_resolve_import(
+        self, monkeypatch, tmp_path
+    ):
+        source_dir = tmp_path / "CamA"
+        source_dir.mkdir()
+        clip1 = source_dir / "clip1.mov"
+        poster = source_dir / "poster.JPG"
+        nested_dir = source_dir / "nested"
+        nested_dir.mkdir()
+        clip2 = nested_dir / "clip2.mp4"
+        still = nested_dir / "still.jpeg"
+        for path in (clip1, poster, clip2, still):
+            path.write_text("x", encoding="utf-8")
+
+        filtered_items = [str(clip1), str(clip2)]
+        imports = {
+            tuple(filtered_items): [
+                FakeClip("3840x2160", "2"),
+                FakeClip("3840x2160", "2"),
+            ]
+        }
+        project_manager, project, media_pool = _install_fake_resolve(monkeypatch, imports)
+        media_storage = sys.modules["DaVinciResolveScript"].scriptapp("Resolve").GetMediaStorage()
+
+        monkeypatch.setattr("builtins.input", lambda: "n")
+        process_files_in_resolve(
+            {"/footage/Day1": {"CamA": [str(source_dir)]}},
+            ["/footage/Day1"],
+            "/proxy",
+            1,
+            is_directory_mode=True,
+            codec="h265",
+        )
+
+        assert media_storage.calls == [filtered_items]
+        assert project_manager.saved is True
+        assert project.render_job_count == 1
+        assert [timeline.name for timeline in media_pool.timelines] == ["0001-3840x2160"]
+
     def test_forced_prores_and_confirm_yes_start_rendering(self, monkeypatch):
         items = ["/source/clip1.mov"]
         imports = {tuple(items): [FakeClip("1920x1080", "2")]}

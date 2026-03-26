@@ -154,12 +154,24 @@ def _build_bin_folder(media_pool, main_bin, bin_parts: tuple[str, ...]):
 
 
 def _filter_import_items(items: tuple[str, ...]) -> tuple[str, ...]:
-    """Drop items that should never be sent to Resolve for import."""
+    """Expand import items and drop files that should never be sent to Resolve."""
     filtered_items: list[str] = []
     skipped_items: list[str] = []
 
     for item in items:
-        if Path(item).suffix.lower() in _SKIPPED_IMPORT_SUFFIXES:
+        item_path = Path(item)
+        if item_path.exists() and item_path.is_dir():
+            for child in sorted(
+                (path for path in item_path.rglob("*") if path.is_file()),
+                key=lambda path: path.as_posix(),
+            ):
+                if child.suffix.lower() in _SKIPPED_IMPORT_SUFFIXES:
+                    skipped_items.append(str(child))
+                    continue
+                filtered_items.append(str(child))
+            continue
+
+        if item_path.suffix.lower() in _SKIPPED_IMPORT_SUFFIXES:
             skipped_items.append(item)
             continue
         filtered_items.append(item)

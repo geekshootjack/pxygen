@@ -7,8 +7,9 @@
 - [x] Refresh README, Chinese README, usage doc, and handoff references to the new project name
 - [x] Verify the rename via tests and lint, then commit as one change set
 - [x] Rename the internal Python package from `davinci_proxy_generator` to `pxygen`
-- [ ] Update imports, tests, and package entry points for the internal rename
-- [ ] Re-run verification and auto-commit the internal package rename
+- [x] Update imports, tests, and package entry points for the internal rename
+- [x] Re-run verification and auto-commit the internal package rename
+- [x] Filter JPG/JPEG inputs before Resolve import, including when a batch item is a directory
 - [x] Audit root-level files and decide keep/move/delete targets
 - [x] Move reference and handoff docs out of the repo root
 - [x] Remove duplicate top-level guidance/backlog files that already have canonical homes
@@ -52,6 +53,7 @@
 - Reverted the empty-timeline append path after real Resolve showed it could create empty timelines without adding clips; render jobs now use `CreateTimelineFromClips()` again, with explicit current-timeline binding and setting verification kept in place.
 - Cleaned the repo root by moving handoff/reference material into `docs/`, moving the legacy script into `legacy/`, and deleting duplicate top-level `CLAUDE.md` / `TODO.md`.
 - Renamed the project branding and package metadata from ProxyPilot / `davinci-proxy-generator` to `pxygen`, while keeping `proxy-generator` as a compatibility CLI alias.
+- Fixed the JPG import gate so directory-mode batches are expanded to file paths before Resolve import, preventing JPG/JPEG files inside source folders from leaking into Resolve.
 - Verification:
-  - `uv run pytest` -> 117 passed
+  - `uv run pytest` -> 118 passed
   - `uv run ruff check src tests` -> All checks passed
