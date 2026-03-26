@@ -1,11 +1,12 @@
-"""Tests for davinci_proxy_generator.cli — argument parsing and dispatch."""
+"""Tests for pxygen.cli — argument parsing and dispatch."""
 from __future__ import annotations
 
-from unittest.mock import patch, call
+import logging
+from unittest.mock import patch
+
 import pytest
 
-from davinci_proxy_generator.cli import _build_parser, main
-
+from pxygen.cli import _build_parser, main
 
 # ---------------------------------------------------------------------------
 # _build_parser — flag parsing
@@ -74,31 +75,41 @@ class TestParser:
         assert args.out_depth == expected_depth
         assert args.group == 1
         assert args.codec == "auto"
+        assert args.log_level == "info"
         assert args.clean_image is False
         assert args.select is False
         assert args.filter is None
+
+    def test_log_level_flag(self):
+        args = self._parse(["-i", "/f", "-o", "/p", "--log-level", "debug"])
+        assert args.log_level == "debug"
 
 
 # ---------------------------------------------------------------------------
 # main() — dispatch logic
 # ---------------------------------------------------------------------------
 
-_MOCK_DIR = "davinci_proxy_generator.cli.process_directory_mode"
-_MOCK_JSON = "davinci_proxy_generator.cli.process_json_mode"
+_MOCK_DIR = "pxygen.cli.process_directory_mode"
+_MOCK_JSON = "pxygen.cli.process_json_mode"
 
 
 class TestDispatch:
     def _run(self, argv):
-        with patch("sys.argv", ["proxy-generator"] + argv):
+        with patch("sys.argv", ["pxygen"] + argv):
             main()
 
     def test_directory_mode_dispatched(self, tmp_path):
         footage = tmp_path / "footage"
         footage.mkdir()
-        with patch(_MOCK_DIR) as mock_dir, patch(_MOCK_JSON) as mock_json:
+        with (
+            patch(_MOCK_DIR) as mock_dir,
+            patch(_MOCK_JSON) as mock_json,
+            patch("pxygen.cli.configure_logging") as mock_logging,
+        ):
             self._run(["-i", str(footage), "-o", "/proxy"])
             mock_dir.assert_called_once()
             mock_json.assert_not_called()
+            mock_logging.assert_called_once_with("info")
 
     def test_json_mode_dispatched(self, tmp_path):
         json_file = tmp_path / "comparison.json"
@@ -163,3 +174,11 @@ class TestDispatch:
             self._run([json_path, "/proxy"])
             mock_json.assert_called_once()
             mock_dir.assert_not_called()
+
+    def test_attribute_error_logged(self, caplog):
+        with patch("sys.argv", ["pxygen", "-i", "/tmp/a.json", "-o", "/proxy"]), patch(
+            "pxygen.cli.configure_logging"
+        ), patch(_MOCK_JSON, side_effect=AttributeError("boom")), caplog.at_level(logging.ERROR):
+            with pytest.raises(SystemExit):
+                main()
+        assert "Resolve API error: boom" in caplog.text

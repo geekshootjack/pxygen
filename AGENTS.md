@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## Project
 
@@ -19,6 +19,13 @@ Python script that automates footage import and proxy generation in DaVinci Reso
 
 Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): description`
 Common types: `feat`, `fix`, `chore`, `refactor`, `test`, `docs`
+
+## Commit Workflow
+
+- After each completed, verified modification batch, create a git commit by default without waiting for an extra user reminder.
+- Use small, reversible commits so problematic changes can be reverted cleanly.
+- Only hold off on committing when the user explicitly asks not to commit yet, or when the work is still in a broken/unverified intermediate state.
+- Do not push unless the user asks for a push.
 
 ## Releases
 

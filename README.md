@@ -1,4 +1,4 @@
-# ProxyPilot
+# pxygen
 
 **Automated proxy generation for DaVinci Resolve.**
 
@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![中文](https://img.shields.io/badge/文档-中文-red)](README.zh.md)
 
-ProxyPilot imports your footage into DaVinci Resolve, organises it into bins that mirror your folder hierarchy, and queues proxy render jobs — all in one command.
+pxygen imports your footage into DaVinci Resolve, organises it into bins that mirror your folder hierarchy, and queues proxy render jobs — all in one command.
 
 ## Features
 
@@ -25,7 +25,7 @@ ProxyPilot imports your footage into DaVinci Resolve, organises it into bins tha
 
 ## Environment Setup
 
-DaVinci Resolve exposes its scripting API through environment variables. Set these before running ProxyPilot:
+DaVinci Resolve exposes its scripting API through environment variables. Set these before running pxygen:
 
 <details>
 <summary>macOS (standard install)</summary>
@@ -71,14 +71,14 @@ export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
 ## Installation
 
 ```sh
-pip install git+https://github.com/thomjiji/ProxyPilot.git
+pip install git+https://github.com/thomjiji/DaVinci_Script_Proxy_Generator.git
 ```
 
 Or clone and install in editable mode:
 
 ```sh
-git clone https://github.com/thomjiji/ProxyPilot.git
-cd ProxyPilot
+git clone https://github.com/thomjiji/DaVinci_Script_Proxy_Generator.git
+cd DaVinci_Script_Proxy_Generator
 pip install -e .
 ```
 
@@ -86,13 +86,13 @@ pip install -e .
 
 ```sh
 # Directory mode — import footage and generate proxies
-proxy-generator -f /Volumes/SSD/Footage -p /Volumes/SSD/Proxy -i 4 -o 5
+pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5
 
 # JSON mode — re-generate missing proxies from a File_Compare result
-proxy-generator -j comparison.json -p /Volumes/SSD/Proxy -d 1 -i 4 -o 5
+pxygen -i comparison.json -o /Volumes/SSD/Proxy -g 1 -n 4 -d 5
 
 # Process only specific shooting days
-proxy-generator -f /Volumes/SSD/Footage -p /Volumes/SSD/Proxy -i 4 -o 5 \
+pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 \
   --filter "Shooting_Day_2,Shooting_Day_3"
 ```
 

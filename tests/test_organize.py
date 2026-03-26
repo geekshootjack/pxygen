@@ -1,15 +1,13 @@
-"""Tests for davinci_proxy_generator.organize."""
-from unittest.mock import patch
+"""Tests for pxygen.organize."""
 
-import pytest
-
-from davinci_proxy_generator.organize import (
+from pxygen.organize import (
+    describe_folders_at_in_depth,
     filter_folders_at_in_depth,
     organize_directory_mode_folders,
     organize_json_mode_files,
     parse_selection,
+    select_folders_at_in_depth,
 )
-
 
 # ---------------------------------------------------------------------------
 # parse_selection
@@ -166,63 +164,53 @@ class TestFilterFoldersAtInDepth:
     }
 
     def test_no_filter_returns_unchanged(self):
-        result = filter_folders_at_in_depth(self.ORGANIZED, 4, filter_mode=None)
+        result = filter_folders_at_in_depth(self.ORGANIZED, None)
         assert result == self.ORGANIZED
 
     def test_filter_mode_keeps_matches(self):
-        result = filter_folders_at_in_depth(
-            self.ORGANIZED, 4, filter_mode="filter", filter_list="Day1,Day3"
-        )
+        result = filter_folders_at_in_depth(self.ORGANIZED, "Day1,Day3")
         assert len(result) == 2
         assert any("Day1" in k for k in result)
         assert any("Day3" in k for k in result)
 
     def test_filter_mode_excludes_non_matches(self):
-        result = filter_folders_at_in_depth(
-            self.ORGANIZED, 4, filter_mode="filter", filter_list="Day1,Day3"
-        )
+        result = filter_folders_at_in_depth(self.ORGANIZED, "Day1,Day3")
         assert not any("Day2" in k for k in result)
 
     def test_filter_mode_no_matches_returns_empty(self):
-        result = filter_folders_at_in_depth(
-            self.ORGANIZED, 4, filter_mode="filter", filter_list="NonExistent"
-        )
+        result = filter_folders_at_in_depth(self.ORGANIZED, "NonExistent")
         assert result == {}
 
     def test_filter_mode_single_folder(self):
-        result = filter_folders_at_in_depth(
-            self.ORGANIZED, 4, filter_mode="filter", filter_list="Day2"
-        )
+        result = filter_folders_at_in_depth(self.ORGANIZED, "Day2")
         assert len(result) == 1
         assert any("Day2" in k for k in result)
 
     def test_filter_mode_ignores_whitespace(self):
-        result = filter_folders_at_in_depth(
-            self.ORGANIZED, 4, filter_mode="filter", filter_list=" Day1 , Day2 "
-        )
+        result = filter_folders_at_in_depth(self.ORGANIZED, " Day1 , Day2 ")
         assert len(result) == 2
 
-    def test_select_mode_all(self):
-        with patch("builtins.input", return_value="all"):
-            result = filter_folders_at_in_depth(self.ORGANIZED, 4, filter_mode="select")
+    def test_none_filter_string_returns_unchanged(self):
+        result = filter_folders_at_in_depth(self.ORGANIZED, None)
         assert result == self.ORGANIZED
 
-    def test_select_mode_single_index(self):
+    def test_describe_folders_at_in_depth_uses_folder_name_labels_by_default(self):
+        options = describe_folders_at_in_depth(self.ORGANIZED)
+        assert [option.label for option in options] == ["Day1", "Day2", "Day3"]
+
+    def test_describe_folders_at_in_depth_can_use_full_paths(self):
+        options = describe_folders_at_in_depth(self.ORGANIZED, show_full_path=True)
+        assert options[0].label == "/Volumes/SSD/Footage/Day1"
+
+    def test_select_folders_at_in_depth_single_index(self):
         sorted_keys = sorted(self.ORGANIZED.keys())
-        with patch("builtins.input", return_value="1"):
-            result = filter_folders_at_in_depth(self.ORGANIZED, 4, filter_mode="select")
+        result = select_folders_at_in_depth(self.ORGANIZED, [0])
         assert len(result) == 1
         assert sorted_keys[0] in result
 
-    def test_select_mode_range(self):
-        with patch("builtins.input", return_value="1-2"):
-            result = filter_folders_at_in_depth(self.ORGANIZED, 4, filter_mode="select")
-        assert len(result) == 2
-
-    def test_select_mode_comma_separated(self):
+    def test_select_folders_at_in_depth_multiple_indices(self):
         sorted_keys = sorted(self.ORGANIZED.keys())
-        with patch("builtins.input", return_value="1,3"):
-            result = filter_folders_at_in_depth(self.ORGANIZED, 4, filter_mode="select")
+        result = select_folders_at_in_depth(self.ORGANIZED, [0, 2])
         assert len(result) == 2
         assert sorted_keys[0] in result
         assert sorted_keys[2] in result

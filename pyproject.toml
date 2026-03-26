@@ -3,16 +3,17 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "davinci-proxy-generator"
+name = "pxygen"
 version = "1.5.2"
 description = "Automates proxy generation for DaVinci Resolve"
 requires-python = ">=3.9"
 
 [project.scripts]
-proxy-generator = "davinci_proxy_generator.cli:main"
+pxygen = "pxygen.cli:main"
+proxy-generator = "pxygen.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/davinci_proxy_generator"]
+packages = ["src/pxygen"]
 
 [dependency-groups]
 dev = [

@@ -1,16 +1,20 @@
 """Command-line interface entry point.
 
-Parses arguments and dispatches to :mod:`davinci_proxy_generator.modes`.
+Parses arguments and dispatches to :mod:`pxygen.modes`.
 Supports both named flags and the legacy positional-argument syntax.
 """
 from __future__ import annotations
 
+import logging
 import platform
 import sys
 
+from .logging_utils import configure_logging
 from .modes import process_directory_mode, process_json_mode
 from .paths import clean_path_input, is_json_file
 from .resolve import ProxyGeneratorError
+
+logger = logging.getLogger(__name__)
 
 
 def _build_parser():
@@ -25,19 +29,20 @@ def _build_parser():
     default_depth = 5 if platform.system() == "Darwin" else 4
 
     parser = argparse.ArgumentParser(
-        prog="proxy-generator",
+        prog="pxygen",
         description=(
-            "DaVinci Resolve Proxy Generator v1.5.2\n\n"
+            "pxygen v1.5.2\n\n"
             "Pass a footage folder or a JSON comparison file to --input;\n"
             "the mode is detected automatically."
         ),
         formatter_class=_Formatter,
         epilog=(
             "Examples:\n"
-            "  proxy-generator -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy\n"
-            "  proxy-generator -i comparison.json -o /Volumes/SSD/Proxy --group 2\n"
-            "  proxy-generator -i /Volumes/SSD/Footage -o /Proxy --select\n"
-            '  proxy-generator -i /Volumes/SSD/Footage -o /Proxy --filter "Day1,Day2"\n'
+            "  pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy\n"
+            "  pxygen -i comparison.json -o /Volumes/SSD/Proxy --group 2\n"
+            "  pxygen -i /Volumes/SSD/Footage -o /Proxy --select\n"
+            '  pxygen -i /Volumes/SSD/Footage -o /Proxy --filter "Day1,Day2"\n'
+            "\nLegacy alias still works: proxy-generator"
         ),
     )
 
@@ -79,6 +84,12 @@ def _build_parser():
         default="auto",
         help="Render codec (h265 for ≤4 audio ch, ProRes otherwise)",
     )
+    parser.add_argument(
+        "--log-level",
+        choices=["debug", "info", "warning", "error"],
+        default="info",
+        help="Logging verbosity",
+    )
 
     # Legacy positional arguments kept for backward compatibility
     parser.add_argument("args", nargs="*", help=argparse.SUPPRESS)
@@ -89,6 +100,7 @@ def _build_parser():
 def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
+    configure_logging(args.log_level)
 
     filter_mode = "select" if args.select else ("filter" if args.filter else None)
     filter_list = args.filter if filter_mode == "filter" else None
@@ -124,27 +136,40 @@ def main() -> None:
             first = clean_path_input(args.args[0])
             output_path = clean_path_input(args.args[1])
             if is_json_file(first):
-                process_json_mode(first, output_path, args.group, args.in_depth, args.out_depth, **shared)
+                process_json_mode(
+                    first,
+                    output_path,
+                    args.group,
+                    args.in_depth,
+                    args.out_depth,
+                    **shared,
+                )
             else:
-                process_directory_mode(first, output_path, args.in_depth, args.out_depth, **shared)
+                process_directory_mode(
+                    first,
+                    output_path,
+                    args.in_depth,
+                    args.out_depth,
+                    **shared,
+                )
 
         else:
             parser.print_help()
             sys.exit(1)
 
     except ProxyGeneratorError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        logger.error("Error: %s", exc)
         sys.exit(1)
     except ValueError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        logger.error("Error: %s", exc)
         sys.exit(1)
     except AttributeError as exc:
         # Typically: Resolve API returned None (Resolve not running or API call failed)
-        print(f"Resolve API error: {exc}", file=sys.stderr)
-        print("Make sure DaVinci Resolve is running.", file=sys.stderr)
+        logger.error("Resolve API error: %s", exc)
+        logger.error("Make sure DaVinci Resolve is running.")
         sys.exit(1)
     except KeyboardInterrupt:
-        print("\nAborted.", file=sys.stderr)
+        logger.error("Aborted.")
         sys.exit(1)
 
 

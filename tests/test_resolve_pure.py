@@ -5,9 +5,8 @@ process_files_in_resolve() and therefore untestable. Extraction during
 refactoring made it directly testable — this is a concrete benefit of
 the restructuring.
 """
-import pytest
 
-from davinci_proxy_generator.resolve import calculate_proxy_dimensions
+from pxygen.resolve import calculate_proxy_dimensions
 
 
 class TestCalculateProxyDimensions:
@@ -35,14 +34,18 @@ class TestCalculateProxyDimensions:
     def test_portrait_orientation(self):
         # Vertical video (e.g. 1080x1920)
         w, h = calculate_proxy_dimensions("1080x1920")
-        assert h == "1080"
-        assert int(w) > 0
-        assert int(w) % 2 == 0
+        assert w == "1080"
+        assert h == "1920"
 
     def test_square_aspect(self):
         w, h = calculate_proxy_dimensions("1080x1080")
         assert w == "1080"
         assert h == "1080"
+
+    def test_portrait_4k_scales_to_full_hd_vertical(self):
+        w, h = calculate_proxy_dimensions("2160x3840")
+        assert w == "1080"
+        assert h == "1920"
 
     def test_odd_width_rounded_to_even(self):
         # Force a case where naive rounding gives an odd number

@@ -1,9 +1,9 @@
-# Agent Handoff Document — ProxyPilot
+# Agent Handoff Document — pxygen
 
 **Date:** 2026-03-26
-**Repo:** `github.com/thomjiji/DaVinci_Script_Proxy_Generator` (rename to ProxyPilot pending)
+**Repo:** `github.com/thomjiji/DaVinci_Script_Proxy_Generator`
 **Current version:** 1.5.2
-**Package name:** `davinci-proxy-generator`, entry point: `proxy-generator`
+**Package name:** `pxygen`, primary entry point: `pxygen` (legacy alias: `proxy-generator`)
 
 ---
 
@@ -22,17 +22,17 @@ Automates footage import and proxy generation in DaVinci Resolve. Given a footag
 ## What Was Done in This Session
 
 ### 1. UV Project Setup
-Converted the legacy single-file `Proxy_generator.py` into a proper UV-managed Python package.
+Converted the legacy single-file `legacy/proxy_generator_legacy.py` into a proper UV-managed Python package.
 
-- `pyproject.toml` — hatchling build backend, entry point `proxy-generator`, dev deps: pytest + ruff
+- `pyproject.toml` — hatchling build backend, entry points `pxygen` and `proxy-generator`, dev deps: pytest + ruff
 - `.python-version` — pinned to `3.14`
 - `python-preference = "only-system"` — **critical** (see Windows section below)
-- `uv run proxy-generator` is the canonical way to run it
+- `uv run pxygen` is the canonical way to run it
 
 ### 2. Package Structure (`src/` layout)
 
 ```
-src/davinci_proxy_generator/
+src/pxygen/
 ├── __init__.py        # __version__ = "1.5.2"
 ├── __main__.py
 ├── cli.py             # argparse entry point, dispatches to modes
@@ -55,7 +55,7 @@ src/davinci_proxy_generator/
 
 Run with: `uv run pytest`
 
-### 4. CLI (`proxy-generator --help`)
+### 4. CLI (`pxygen --help`)
 
 All flags have both short and long forms:
 
@@ -71,27 +71,27 @@ All flags have both short and long forms:
 | `-c` | `--clean-image` | No burn-in overlays |
 | `-k` | `--codec` | `auto` / `prores` / `h265` / `hevc` / `265` |
 
-Legacy positional syntax (`proxy-generator <input> <output>`) still works for backward compatibility.
+Legacy positional syntax (`pxygen <input> <output>`) still works for backward compatibility.
 
 ### 5. Windows Compatibility — Critical Finding
 
-**Problem:** `uv run proxy-generator` crashed silently on Windows.
+**Problem:** `uv run pxygen` crashed silently on Windows.
 
 **Root cause:** `DaVinciResolveScript.py` loads `fusionscript.dll` as a Python C extension via `importlib.machinery.ExtensionFileLoader`. The crash occurs inside `PyInit_fusionscript`. python-build-standalone (what uv downloads by default) statically links the C runtime; `fusionscript.dll` dynamically links `VCRUNTIME140.dll`. Two separate heaps → native crash. No Python-level fix is possible.
 
-**Fix:** `python-preference = "only-system"` in `pyproject.toml`. uv now uses the official system Python (python.org installer) transparently. `uv run proxy-generator` still works as a single command.
+**Fix:** `python-preference = "only-system"` in `pyproject.toml`. uv now uses the official system Python (python.org installer) transparently. `uv run pxygen` still works as a single command.
 
 **macOS risk:** On a clean macOS with no system Python (only Apple's stub), this will fail. Homebrew Python or the python.org installer must be present. Not yet tested against a live Resolve instance on macOS.
 
 ### 6. Docs & Housekeeping
 
-- `README.md` — rewritten with ProxyPilot branding (EN)
+- `README.md` — rewritten with pxygen branding (EN)
 - `README.zh.md` — full Chinese translation
 - `docs/usage.md` — complete CLI reference
-- `CLAUDE.md` — project guidance for AI coding sessions
-- `TODO.md` — tracks backlog items
+- `docs/handoff.md` — agent handoff and branch notes
+- `tasks/todo.md` — active engineering task tracker
 - `LICENSE` — added thomjiji as copyright holder alongside original author
-- `Proxy_generator.py` — legacy root script, kept until WebUI milestone validated
+- `legacy/proxy_generator_legacy.py` — legacy script kept as reference
 
 ---
 
@@ -138,20 +138,20 @@ The agreed next milestone is a **local FastAPI + HTML/JS web UI** that replaces 
 - Web form covers all current CLI flags (input path, output path, depths, codec, filter, etc.)
 - Closing the browser tab does NOT stop the server
 - Behaviour must be identical to the current CLI
-- `Proxy_generator.py` (legacy root script) to be removed once this milestone is validated
+- `legacy/proxy_generator_legacy.py` (legacy reference script) to be removed once this milestone is validated
 
 **Design constraint:** The refactored package was explicitly designed with this separation in mind. `cli.py` already separates argument parsing from business logic (`modes.py`). The WebUI should call `process_directory_mode` / `process_json_mode` directly, the same way `cli.py` does — no duplication of business logic.
 
 ---
 
-## Remaining Backlog (from TODO.md)
+## Remaining Backlog (from `tasks/todo.md`)
 
 - [ ] WebUI milestone (FastAPI + HTML/JS) — **the next big thing**
 - [ ] Ruff format-on-edit hook (uv is set up, can be wired anytime with `uv run ruff format`)
 - [ ] Integration tests (require live Resolve + test footage — needs a dedicated test machine)
-- [ ] Rename GitHub repo to `ProxyPilot` + update description
+- [ ] Rename GitHub repo to `pxygen` + update description
 - [ ] Update `pyproject.toml` author field
-- [ ] Remove `Proxy_generator.py` after WebUI milestone
+- [ ] Remove `legacy/proxy_generator_legacy.py` after WebUI milestone
 - [ ] Validate macOS `only-system` Python behaviour on a clean machine
 
 ---
@@ -182,7 +182,11 @@ This addendum summarizes all commits currently on the feature branch relative to
 ### Branch commit history
 
 1. `ef5a617` `refactor(resolve): split execution flow and add planning layer`
+<<<<<<<< HEAD:docs/HANDOFF.md
    - Added internal planning dataclasses in `src/davinci_proxy_generator/plan.py`
+========
+   - Added internal planning dataclasses in `src/pxygen/plan.py`
+>>>>>>>> codex/resolve-refactor-tdd:docs/handoff.md
    - Refactored `modes.py` to build execution plans before calling Resolve
    - Split `resolve.py` into smaller orchestration helpers
    - Added orchestration-heavy tests in `tests/test_modes.py` and `tests/test_resolve_flow.py`
