@@ -1,6 +1,7 @@
 """Tests for davinci_proxy_generator.resolve orchestration."""
 from __future__ import annotations
 
+import logging
 import sys
 import types
 from pathlib import PurePosixPath
@@ -283,7 +284,7 @@ class TestProcessFilesInResolve:
         ]
 
     def test_skips_clips_with_missing_resolution_without_crashing(
-        self, monkeypatch, capsys
+        self, monkeypatch, caplog
     ):
         items = ["/source/a.mov", "/source/b.mov"]
         imports = {
@@ -295,17 +296,17 @@ class TestProcessFilesInResolve:
         _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
         monkeypatch.setattr("builtins.input", lambda: "n")
-        process_files_in_resolve(
-            {"/footage/Day1": {"CamA": items}},
-            ["/footage/Day1"],
-            "/proxy",
-            1,
-            is_directory_mode=True,
-            codec="h265",
-        )
+        with caplog.at_level(logging.WARNING):
+            process_files_in_resolve(
+                {"/footage/Day1": {"CamA": items}},
+                ["/footage/Day1"],
+                "/proxy",
+                1,
+                is_directory_mode=True,
+                codec="h265",
+            )
 
-        captured = capsys.readouterr()
-        assert "invalid resolution" in captured.out.lower()
+        assert "invalid resolution" in caplog.text.lower()
         assert project.render_job_count == 1
         assert [timeline.name for timeline in media_pool.timelines] == ["0001-1920x1080"]
         assert all(timeline.name != "0001-" for timeline in media_pool.timelines)

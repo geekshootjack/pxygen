@@ -5,12 +5,16 @@ Supports both named flags and the legacy positional-argument syntax.
 """
 from __future__ import annotations
 
+import logging
 import platform
 import sys
 
+from .logging_utils import configure_logging
 from .modes import process_directory_mode, process_json_mode
 from .paths import clean_path_input, is_json_file
 from .resolve import ProxyGeneratorError
+
+logger = logging.getLogger(__name__)
 
 
 def _build_parser():
@@ -79,6 +83,12 @@ def _build_parser():
         default="auto",
         help="Render codec (h265 for ≤4 audio ch, ProRes otherwise)",
     )
+    parser.add_argument(
+        "--log-level",
+        choices=["debug", "info", "warning", "error"],
+        default="info",
+        help="Logging verbosity",
+    )
 
     # Legacy positional arguments kept for backward compatibility
     parser.add_argument("args", nargs="*", help=argparse.SUPPRESS)
@@ -89,6 +99,7 @@ def _build_parser():
 def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
+    configure_logging(args.log_level)
 
     filter_mode = "select" if args.select else ("filter" if args.filter else None)
     filter_list = args.filter if filter_mode == "filter" else None
@@ -146,18 +157,18 @@ def main() -> None:
             sys.exit(1)
 
     except ProxyGeneratorError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        logger.error("Error: %s", exc)
         sys.exit(1)
     except ValueError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        logger.error("Error: %s", exc)
         sys.exit(1)
     except AttributeError as exc:
         # Typically: Resolve API returned None (Resolve not running or API call failed)
-        print(f"Resolve API error: {exc}", file=sys.stderr)
-        print("Make sure DaVinci Resolve is running.", file=sys.stderr)
+        logger.error("Resolve API error: %s", exc)
+        logger.error("Make sure DaVinci Resolve is running.")
         sys.exit(1)
     except KeyboardInterrupt:
-        print("\nAborted.", file=sys.stderr)
+        logger.error("Aborted.")
         sys.exit(1)
 
 

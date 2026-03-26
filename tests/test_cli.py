@@ -1,6 +1,7 @@
 """Tests for davinci_proxy_generator.cli — argument parsing and dispatch."""
 from __future__ import annotations
 
+import logging
 from unittest.mock import patch
 
 import pytest
@@ -74,9 +75,14 @@ class TestParser:
         assert args.out_depth == expected_depth
         assert args.group == 1
         assert args.codec == "auto"
+        assert args.log_level == "info"
         assert args.clean_image is False
         assert args.select is False
         assert args.filter is None
+
+    def test_log_level_flag(self):
+        args = self._parse(["-i", "/f", "-o", "/p", "--log-level", "debug"])
+        assert args.log_level == "debug"
 
 
 # ---------------------------------------------------------------------------
@@ -95,10 +101,15 @@ class TestDispatch:
     def test_directory_mode_dispatched(self, tmp_path):
         footage = tmp_path / "footage"
         footage.mkdir()
-        with patch(_MOCK_DIR) as mock_dir, patch(_MOCK_JSON) as mock_json:
+        with (
+            patch(_MOCK_DIR) as mock_dir,
+            patch(_MOCK_JSON) as mock_json,
+            patch("davinci_proxy_generator.cli.configure_logging") as mock_logging,
+        ):
             self._run(["-i", str(footage), "-o", "/proxy"])
             mock_dir.assert_called_once()
             mock_json.assert_not_called()
+            mock_logging.assert_called_once_with("info")
 
     def test_json_mode_dispatched(self, tmp_path):
         json_file = tmp_path / "comparison.json"
@@ -163,3 +174,11 @@ class TestDispatch:
             self._run([json_path, "/proxy"])
             mock_json.assert_called_once()
             mock_dir.assert_not_called()
+
+    def test_attribute_error_logged(self, caplog):
+        with patch("sys.argv", ["proxy-generator", "-i", "/tmp/a.json", "-o", "/proxy"]), patch(
+            "davinci_proxy_generator.cli.configure_logging"
+        ), patch(_MOCK_JSON, side_effect=AttributeError("boom")), caplog.at_level(logging.ERROR):
+            with pytest.raises(SystemExit):
+                main()
+        assert "Resolve API error: boom" in caplog.text

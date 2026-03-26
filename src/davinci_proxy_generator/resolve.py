@@ -7,6 +7,7 @@ Resolve instance.
 from __future__ import annotations
 
 import itertools
+import logging
 import os
 import re
 import sys
@@ -17,6 +18,7 @@ from pathlib import Path
 
 from .plan import ResolveExecutionPlan, build_resolve_execution_plan
 
+logger = logging.getLogger(__name__)
 
 class ProxyGeneratorError(Exception):
     """Raised for expected, user-facing errors in proxy generation."""
@@ -117,6 +119,7 @@ def _get_or_create_subfolder(media_pool, parent, name: str):
     for folder in parent.GetSubFolderList():
         if folder.GetName() == name:
             return folder
+    logger.debug("Creating subfolder %r under %r", name, parent.GetName())
     return media_pool.AddSubFolder(parent, name)
 
 
@@ -146,6 +149,14 @@ def _add_render_job(
 ) -> None:
     if not clips:
         return
+    logger.debug(
+        "Creating timeline %r for %d clip(s), resolution=%s, target=%s, preset=%s",
+        timeline_name,
+        len(clips),
+        resolution_str,
+        target_dir,
+        render_preset,
+    )
     timeline = media_pool.CreateTimelineFromClips(timeline_name, clips)
     proxy_width, proxy_height = calculate_proxy_dimensions(resolution_str)
     timeline.SetSetting("useCustomSettings", "1")
@@ -175,13 +186,14 @@ def _classify_clips(
 
     for clip in imported_clips:
         if clip.GetClipProperty("Type") == "Still":
+            logger.debug("Skipping still image clip during Resolve classification")
             continue
         raw_resolution = clip.GetClipProperty("Resolution")
         resolution = _normalize_resolution(raw_resolution)
         if resolution is None:
-            output(
-                "  Warning: skipping clip with invalid resolution "
-                f"property: {raw_resolution!r}"
+            logger.warning(
+                "Warning: skipping clip with invalid resolution property: %r",
+                raw_resolution,
             )
             continue
         res_bin = _get_or_create_subfolder(media_pool, bin_folder, resolution)
@@ -189,6 +201,7 @@ def _classify_clips(
             audio_tracks = int(clip.GetClipProperty("Audio Ch") or 0)
         except (ValueError, TypeError):
             audio_tracks = 0
+        logger.debug("Clip classified as resolution=%s audio_tracks=%d", resolution, audio_tracks)
 
         is_multi_audio = audio_tracks > 4
         key = (resolution, is_multi_audio)
@@ -207,6 +220,13 @@ def _classify_clips(
         key = (resolution, is_multi_audio)
         clips = grouped_clips[key]
         dest_bin = destination_bins[key]
+        logger.debug(
+            "Moving %d clip(s) into %r for resolution=%s multi_audio=%s",
+            len(clips),
+            dest_bin.GetName(),
+            resolution,
+            is_multi_audio,
+        )
         media_pool.MoveClips(clips, dest_bin)
         clip_groups.append(
             _ClipGroup(
@@ -264,15 +284,28 @@ def _default_confirm_render(output: Callable[[str], None]) -> bool:
 def execute_resolve_plan(
     plan: ResolveExecutionPlan,
     *,
-    output: Callable[[str], None] = print,
+    output: Callable[[str], None] | None = None,
     confirm_render: Callable[[], bool] | None = None,
 ) -> None:
     """Execute a pre-built Resolve plan."""
+    output = output or logger.info
     context = _connect_to_resolve(plan.project_prefix)
     standard_preset, multi_audio_preset = _resolve_render_presets(plan.codec)
+    logger.debug(
+        (
+            "Executing Resolve plan: mode=%s project_prefix=%s "
+            "footage_folders=%d codec=%s clean_image=%s"
+        ),
+        plan.mode_name,
+        plan.project_prefix,
+        len(plan.footage_folders),
+        plan.codec,
+        plan.clean_image,
+    )
 
     if not plan.clean_image:
         context.project.LoadBurnInPreset("burn-in")
+        logger.debug("Loaded burn-in preset")
 
     counter = itertools.count(1)
 
@@ -287,11 +320,17 @@ def execute_resolve_plan(
             try:
                 imported_clips = context.media_storage.AddItemListToMediaPool(list(batch.items))
                 if not imported_clips:
-                    output(
-                        f"  Warning: failed to import items from "
-                        f"{batch.subfolder_key or footage_folder.footage_folder_name}"
+                    logger.warning(
+                        "Warning: failed to import items from %s",
+                        batch.subfolder_key or footage_folder.footage_folder_name,
                     )
                     continue
+                logger.debug(
+                    "Imported %d clip(s)/item(s) for batch %r under %s",
+                    len(imported_clips),
+                    batch.subfolder_key,
+                    footage_folder.footage_folder_name,
+                )
 
                 clip_groups = _classify_clips(
                     context.media_pool,
@@ -310,10 +349,11 @@ def execute_resolve_plan(
                     output,
                 )
             except Exception as exc:
-                output(f"  Error processing items: {exc}")
+                logger.error("  Error processing items: %s", exc)
                 continue
 
     context.project_manager.SaveProject()
+    logger.debug("Saved Resolve project")
     should_start_render = confirm_render or (lambda: _default_confirm_render(output))
     if should_start_render():
         context.project.StartRendering()
