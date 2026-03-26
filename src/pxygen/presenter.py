@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from .table_output import output_renderable, output_table
+from .table_output import output_table
 
 OutputFn = Callable[[str], None]
 InputFn = Callable[[], str]
@@ -34,9 +34,6 @@ class ConsolePresenter:
 
     def read_line(self) -> str:
         return self._input()
-
-    def show_renderable(self, renderable) -> None:
-        output_renderable(renderable, self.show)
 
     def confirm(self, prompt: str) -> bool:
         self.show(prompt)

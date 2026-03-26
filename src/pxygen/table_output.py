@@ -12,23 +12,6 @@ from rich.table import Table
 OutputFn = Callable[[str], None]
 
 
-def output_renderable(renderable, output: OutputFn) -> None:
-    """Render any rich renderable through the provided output callback."""
-    terminal_width = max(shutil.get_terminal_size(fallback=(160, 20)).columns, 120)
-    buffer = io.StringIO()
-    console = Console(
-        file=buffer,
-        width=terminal_width,
-        color_system=None,
-        force_terminal=False,
-        soft_wrap=False,
-        legacy_windows=False,
-    )
-    console.print(renderable)
-    for line in buffer.getvalue().splitlines():
-        output(line)
-
-
 def output_table(
     title: str,
     headers: tuple[str, ...],
@@ -53,4 +36,16 @@ def output_table(
     for row in rows:
         table.add_row(*(str(cell).replace("\n", " ") for cell in row))
 
-    output_renderable(table, output)
+    terminal_width = max(shutil.get_terminal_size(fallback=(160, 20)).columns, 120)
+    buffer = io.StringIO()
+    console = Console(
+        file=buffer,
+        width=terminal_width,
+        color_system=None,
+        force_terminal=False,
+        soft_wrap=False,
+        legacy_windows=False,
+    )
+    console.print(table)
+    for line in buffer.getvalue().splitlines():
+        output(line)

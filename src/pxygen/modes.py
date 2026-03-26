@@ -23,7 +23,6 @@ from .organize import (
 from .paths import format_path_parts, path_parts
 from .plan import build_resolve_execution_plan
 from .presenter import ConsolePresenter
-from .preview import show_structure_preview
 from .resolve import ProxyGeneratorError, execute_resolve_plan
 from .table_output import output_table
 
@@ -84,29 +83,6 @@ def _format_depth_value(spec: _DepthSpec) -> str:
     if spec.mode == "relative":
         return f"{spec.requested} (relative -> absolute {spec.resolved})"
     return f"{spec.requested} (legacy absolute)"
-
-
-def _common_parent_root(paths: list[str]) -> str | None:
-    """Return the common parent directory path across file paths, if inferable."""
-    parent_parts_lists = [path_parts(path)[:-1] for path in paths if path_parts(path)]
-    if not parent_parts_lists:
-        return None
-    if len({tuple(parts) for parts in parent_parts_lists}) < 2:
-        return None
-
-    prefix = list(parent_parts_lists[0])
-    for parts in parent_parts_lists[1:]:
-        max_common = min(len(prefix), len(parts))
-        common_length = 0
-        while common_length < max_common and prefix[common_length] == parts[common_length]:
-            common_length += 1
-        prefix = prefix[:common_length]
-        if not prefix:
-            return None
-    if not prefix:
-        return None
-    windows = ":" in paths[0][:3] or "\\" in paths[0]
-    return format_path_parts(prefix, absolute=not windows, windows=windows)
 
 
 def _print_folder_options(options, in_depth: int, output: OutputFn) -> None:
@@ -194,7 +170,6 @@ def process_json_mode(
     input_func: InputFn | None = None,
     output: OutputFn | None = None,
     confirm_render: Callable[[], bool] | None = None,
-    preview_only: bool = False,
 ) -> None:
     """Re-generate missing proxies from a file-comparison JSON produced by File_Compare.
 
@@ -257,7 +232,6 @@ def process_json_mode(
         raise ProxyGeneratorError(f"No files found in group{dataset}")
 
     root_depth = _common_parent_depth(file_list)
-    inferred_root = _common_parent_root(file_list)
     in_depth_spec = _normalize_depth(root_depth, in_depth)
     out_depth_spec = _normalize_depth(root_depth, out_depth)
     if out_depth_spec.resolved < in_depth_spec.resolved:
@@ -341,15 +315,6 @@ def process_json_mode(
         "Built JSON mode execution plan with %d footage folder(s)",
         len(plan.footage_folders),
     )
-    if preview_only:
-        show_structure_preview(
-            plan,
-            input_root=inferred_root or plan.footage_folders[0].footage_folder_path,
-            proxy_root=proxy_path,
-            presenter=presenter,
-            input_root_label=inferred_root or "Inferred JSON root",
-        )
-        return
     execute_resolve_plan(plan, output=output, confirm_render=confirm_render)
 
 
@@ -366,7 +331,6 @@ def process_directory_mode(
     input_func: InputFn | None = None,
     output: OutputFn | None = None,
     confirm_render: Callable[[], bool] | None = None,
-    preview_only: bool = False,
 ) -> None:
     """Import footage directly from a folder hierarchy and generate proxies.
 
@@ -546,12 +510,4 @@ def process_directory_mode(
         "Built directory mode execution plan with %d footage folder(s)",
         len(plan.footage_folders),
     )
-    if preview_only:
-        show_structure_preview(
-            plan,
-            input_root=footage_path,
-            proxy_root=proxy_path,
-            presenter=presenter,
-        )
-        return
     execute_resolve_plan(plan, output=output, confirm_render=confirm_render)

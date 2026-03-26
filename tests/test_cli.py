@@ -89,10 +89,6 @@ class TestParser:
         args = self._parse(["-i", "/f", "-o", "/p", "--log-file", "/tmp/pxygen.log"])
         assert args.log_file == "/tmp/pxygen.log"
 
-    def test_preview_structure_flag(self):
-        args = self._parse(["-i", "/f", "-o", "/p", "--preview-structure"])
-        assert args.preview_structure is True
-
 
 class TestLoggingConfig:
     def test_configure_logging_uses_standard_structured_format(self):
@@ -212,14 +208,6 @@ class TestDispatch:
             self._run(["-i", str(footage), "-o", "/proxy", "-k", "prores"])
             _, kwargs = mock_dir.call_args
             assert kwargs["codec"] == "prores"
-
-    def test_preview_structure_passed_through(self, tmp_path):
-        footage = tmp_path / "footage"
-        footage.mkdir()
-        with patch(_MOCK_DIR) as mock_dir:
-            self._run(["-i", str(footage), "-o", "/proxy", "--preview-structure"])
-            _, kwargs = mock_dir.call_args
-            assert kwargs["preview_only"] is True
 
     def test_clean_image_passed_through(self, tmp_path):
         footage = tmp_path / "footage"
