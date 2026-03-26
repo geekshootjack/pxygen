@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import itertools
 import os
+import re
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -58,6 +59,19 @@ def calculate_proxy_dimensions(resolution_str: str) -> tuple[str, str]:
     if proxy_width % 2 == 1:
         proxy_width += 1
     return str(proxy_width), str(proxy_height)
+
+
+def _normalize_resolution(resolution: str | None) -> str | None:
+    """Return a canonical ``WIDTHxHEIGHT`` resolution string, or ``None``."""
+    if not resolution:
+        return None
+
+    match = re.fullmatch(r"\s*(\d+)\s*[xX]\s*(\d+)\s*", resolution)
+    if not match:
+        return None
+
+    width, height = match.groups()
+    return f"{width}x{height}"
 
 
 def _connect_to_resolve(project_prefix: str) -> _ResolveContext:
@@ -149,7 +163,12 @@ def _add_render_job(
     project.AddRenderJob()
 
 
-def _classify_clips(media_pool, bin_folder, imported_clips: list) -> list[_ClipGroup]:
+def _classify_clips(
+    media_pool,
+    bin_folder,
+    imported_clips: list,
+    output: Callable[[str], None],
+) -> list[_ClipGroup]:
     group_order: list[tuple[str, bool]] = []
     grouped_clips: dict[tuple[str, bool], list[object]] = {}
     destination_bins: dict[tuple[str, bool], object] = {}
@@ -157,7 +176,14 @@ def _classify_clips(media_pool, bin_folder, imported_clips: list) -> list[_ClipG
     for clip in imported_clips:
         if clip.GetClipProperty("Type") == "Still":
             continue
-        resolution = clip.GetClipProperty("Resolution")
+        raw_resolution = clip.GetClipProperty("Resolution")
+        resolution = _normalize_resolution(raw_resolution)
+        if resolution is None:
+            output(
+                "  Warning: skipping clip with invalid resolution "
+                f"property: {raw_resolution!r}"
+            )
+            continue
         res_bin = _get_or_create_subfolder(media_pool, bin_folder, resolution)
         try:
             audio_tracks = int(clip.GetClipProperty("Audio Ch") or 0)
@@ -267,7 +293,12 @@ def execute_resolve_plan(
                     )
                     continue
 
-                clip_groups = _classify_clips(context.media_pool, bin_folder, imported_clips)
+                clip_groups = _classify_clips(
+                    context.media_pool,
+                    bin_folder,
+                    imported_clips,
+                    output,
+                )
                 _queue_render_jobs_for_bin(
                     context.project,
                     context.media_pool,
