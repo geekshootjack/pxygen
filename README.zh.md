@@ -1,4 +1,4 @@
-# ProxyPilot
+# pxygen
 
 **DaVinci Resolve 自动化代理生成工具。**
 
@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![English](https://img.shields.io/badge/docs-English-blue)](README.md)
 
-ProxyPilot 将素材导入 DaVinci Resolve，按照文件夹层级自动建立媒体库 bin 结构，并批量排队代理渲染任务——一条命令完成全部操作。
+pxygen 将素材导入 DaVinci Resolve，按照文件夹层级自动建立媒体库 bin 结构，并批量排队代理渲染任务——一条命令完成全部操作。
 
 ## 功能特性
 
@@ -71,14 +71,14 @@ export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
 ## 安装
 
 ```sh
-pip install git+https://github.com/thomjiji/ProxyPilot.git
+pip install git+https://github.com/thomjiji/DaVinci_Script_Proxy_Generator.git
 ```
 
 或克隆后以可编辑模式安装：
 
 ```sh
-git clone https://github.com/thomjiji/ProxyPilot.git
-cd ProxyPilot
+git clone https://github.com/thomjiji/DaVinci_Script_Proxy_Generator.git
+cd DaVinci_Script_Proxy_Generator
 pip install -e .
 ```
 
@@ -86,13 +86,13 @@ pip install -e .
 
 ```sh
 # 目录模式——导入素材并生成代理
-proxy-generator -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5
+pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5
 
 # JSON 模式——基于 File_Compare 结果重新生成缺失代理
-proxy-generator -i comparison.json -o /Volumes/SSD/Proxy -g 1 -n 4 -d 5
+pxygen -i comparison.json -o /Volumes/SSD/Proxy -g 1 -n 4 -d 5
 
 # 只处理特定拍摄日
-proxy-generator -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 \
+pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 \
   --filter "Shooting_Day_2,Shooting_Day_3"
 ```
 

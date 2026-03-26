@@ -29,19 +29,20 @@ def _build_parser():
     default_depth = 5 if platform.system() == "Darwin" else 4
 
     parser = argparse.ArgumentParser(
-        prog="proxy-generator",
+        prog="pxygen",
         description=(
-            "DaVinci Resolve Proxy Generator v1.5.2\n\n"
+            "pxygen v1.5.2\n\n"
             "Pass a footage folder or a JSON comparison file to --input;\n"
             "the mode is detected automatically."
         ),
         formatter_class=_Formatter,
         epilog=(
             "Examples:\n"
-            "  proxy-generator -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy\n"
-            "  proxy-generator -i comparison.json -o /Volumes/SSD/Proxy --group 2\n"
-            "  proxy-generator -i /Volumes/SSD/Footage -o /Proxy --select\n"
-            '  proxy-generator -i /Volumes/SSD/Footage -o /Proxy --filter "Day1,Day2"\n'
+            "  pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy\n"
+            "  pxygen -i comparison.json -o /Volumes/SSD/Proxy --group 2\n"
+            "  pxygen -i /Volumes/SSD/Footage -o /Proxy --select\n"
+            '  pxygen -i /Volumes/SSD/Footage -o /Proxy --filter "Day1,Day2"\n'
+            "\nLegacy alias still works: proxy-generator"
         ),
     )
 

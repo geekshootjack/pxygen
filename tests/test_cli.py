@@ -95,7 +95,7 @@ _MOCK_JSON = "davinci_proxy_generator.cli.process_json_mode"
 
 class TestDispatch:
     def _run(self, argv):
-        with patch("sys.argv", ["proxy-generator"] + argv):
+        with patch("sys.argv", ["pxygen"] + argv):
             main()
 
     def test_directory_mode_dispatched(self, tmp_path):
@@ -176,7 +176,7 @@ class TestDispatch:
             mock_dir.assert_not_called()
 
     def test_attribute_error_logged(self, caplog):
-        with patch("sys.argv", ["proxy-generator", "-i", "/tmp/a.json", "-o", "/proxy"]), patch(
+        with patch("sys.argv", ["pxygen", "-i", "/tmp/a.json", "-o", "/proxy"]), patch(
             "davinci_proxy_generator.cli.configure_logging"
         ), patch(_MOCK_JSON, side_effect=AttributeError("boom")), caplog.at_level(logging.ERROR):
             with pytest.raises(SystemExit):

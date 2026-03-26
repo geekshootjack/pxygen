@@ -2,6 +2,10 @@
 
 ## Checklist
 
+- [x] Rename project branding and package metadata from ProxyPilot to pxygen
+- [x] Update CLI help/examples to prefer `pxygen` while keeping old invocation compatibility if needed
+- [x] Refresh README, Chinese README, usage doc, and handoff references to the new project name
+- [x] Verify the rename via tests and lint, then commit as one change set
 - [x] Audit root-level files and decide keep/move/delete targets
 - [x] Move reference and handoff docs out of the repo root
 - [x] Remove duplicate top-level guidance/backlog files that already have canonical homes
@@ -44,6 +48,7 @@
 - Added runtime checks for timeline setting application so Resolve cannot silently queue a job after rejecting custom timeline dimensions.
 - Reverted the empty-timeline append path after real Resolve showed it could create empty timelines without adding clips; render jobs now use `CreateTimelineFromClips()` again, with explicit current-timeline binding and setting verification kept in place.
 - Cleaned the repo root by moving handoff/reference material into `docs/`, moving the legacy script into `legacy/`, and deleting duplicate top-level `CLAUDE.md` / `TODO.md`.
+- Renamed the project branding and package metadata from ProxyPilot / `davinci-proxy-generator` to `pxygen`, while keeping `proxy-generator` as a compatibility CLI alias.
 - Verification:
   - `uv run pytest` -> 117 passed
   - `uv run ruff check src tests` -> All checks passed
