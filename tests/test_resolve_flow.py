@@ -1,9 +1,9 @@
 """Tests for davinci_proxy_generator.resolve orchestration."""
 from __future__ import annotations
 
-import os
 import sys
 import types
+from pathlib import PurePosixPath
 
 from davinci_proxy_generator.resolve import process_files_in_resolve
 
@@ -237,6 +237,6 @@ class TestProcessFilesInResolve:
             "Video Resolution 4096x2160   #1",
         ]
         assert all(
-            settings["TargetDir"] == os.path.join("/proxy", "Day1", "CamA")
+            settings["TargetDir"] == PurePosixPath("/proxy", "Day1", "CamA").as_posix()
             for settings in project.render_settings
         )

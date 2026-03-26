@@ -1,8 +1,4 @@
-"""Path manipulation utilities.
-
-All functions here are pure Python with no external dependencies.
-Pathlib is used throughout for cross-platform correctness (Windows / macOS / Linux).
-"""
+"""Path manipulation utilities."""
 from __future__ import annotations
 
 from pathlib import Path, PurePosixPath, PureWindowsPath
@@ -26,9 +22,6 @@ def clean_path_input(path: str) -> str:
 
 def path_parts(path: str | Path) -> list[str]:
     """Return depth-countable path components (no root separator, normalised drive).
-
-    Equivalent to ``[p for p in str(path).split(os.sep) if p]`` on the host OS,
-    but uses pathlib so it is correct on both Windows and Unix.
 
     Examples (macOS/Linux):
         '/Volumes/SSD/Footage/Day1' → ['Volumes', 'SSD', 'Footage', 'Day1']
@@ -63,6 +56,45 @@ def _looks_windows_parts(parts: list[str]) -> bool:
     return bool(parts) and parts[0].endswith(":")
 
 
+def format_path_parts(
+    parts: list[str] | tuple[str, ...],
+    *,
+    absolute: bool = False,
+    windows: bool | None = None,
+) -> str:
+    """Format *parts* into a path string using explicit path semantics."""
+    path_parts_list = list(parts)
+    if not path_parts_list:
+        return ""
+
+    if windows is None:
+        windows = _looks_windows_parts(path_parts_list)
+
+    if windows:
+        if _looks_windows_parts(path_parts_list):
+            drive = f"{path_parts_list[0]}\\"
+            return str(PureWindowsPath(drive, *path_parts_list[1:]))
+        return str(PureWindowsPath(*path_parts_list))
+
+    if absolute:
+        return str(PurePosixPath("/", *path_parts_list))
+    return str(PurePosixPath(*path_parts_list))
+
+
+def subfolder_key_from_parts(parts: list[str] | tuple[str, ...]) -> str:
+    """Serialize relative folder parts into a stable internal subfolder key."""
+    if not parts:
+        return ""
+    return PurePosixPath(*parts).as_posix()
+
+
+def split_subfolder_key(subfolder_key: str) -> tuple[str, ...]:
+    """Return folder parts from an internal subfolder key."""
+    if not subfolder_key:
+        return ()
+    return PurePosixPath(subfolder_key).parts
+
+
 def compute_key_path(
     parts: list[str],
     in_depth: int,
@@ -74,9 +106,8 @@ def compute_key_path(
     Args:
         parts: Output of :func:`path_parts` (no root separator).
         in_depth: Number of components to include (must be ≥ 1).
-        leading_sep: Prepend ``os.sep`` to the result. Defaults to *True* on
-            Unix (to reconstruct absolute paths) and *False* on Windows (the
-            drive letter already anchors the path).
+        leading_sep: Prepend a leading slash on POSIX-style paths. Defaults to
+            *True* for POSIX-style parts and *False* for Windows drive paths.
 
     Returns:
         The joined path string, or *None* if *parts* is shorter than *in_depth*.
@@ -92,15 +123,11 @@ def compute_key_path(
 
     if leading_sep is None:
         leading_sep = not _looks_windows_parts(key_components)
-
-    if _looks_windows_parts(key_components):
-        drive = f"{key_components[0]}\\"
-        windows_path = PureWindowsPath(drive, *key_components[1:])
-        return str(windows_path)
-
-    if leading_sep:
-        return str(PurePosixPath("/", *key_components))
-    return str(PurePosixPath(*key_components))
+    return format_path_parts(
+        key_components,
+        absolute=leading_sep,
+        windows=_looks_windows_parts(key_components),
+    )
 
 
 def is_json_file(path: str) -> bool:

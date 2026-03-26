@@ -7,7 +7,6 @@ pure Python orchestration.
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Callable
 from pathlib import Path
 
@@ -19,7 +18,7 @@ from .organize import (
     parse_selection,
     select_folders_at_in_depth,
 )
-from .paths import path_parts
+from .paths import format_path_parts, path_parts
 from .plan import build_resolve_execution_plan
 from .resolve import ProxyGeneratorError, execute_resolve_plan
 
@@ -46,6 +45,42 @@ def _read_selection_indices(
     if choice.lower() == "all":
         return None
     return parse_selection(choice, len(options))
+
+
+def _iter_child_directories(path: Path) -> list[Path]:
+    """Return child directories in deterministic order."""
+    try:
+        children = (child for child in path.iterdir() if child.is_dir())
+        return sorted(children, key=lambda child: child.name)
+    except OSError:
+        return []
+
+
+def _collect_directories_at_depth(root: Path, target_depth: int) -> list[Path]:
+    """Collect directories exactly at *target_depth* without descending below them."""
+    matches: list[Path] = []
+    stack = [root]
+    while stack:
+        current = stack.pop()
+        current_depth = len(path_parts(current))
+        if current_depth == target_depth:
+            matches.append(current)
+            continue
+        if current_depth > target_depth:
+            continue
+        stack.extend(reversed(_iter_child_directories(current)))
+    return matches
+
+
+def _collect_directory_tree(root: Path) -> list[Path]:
+    """Return *root* and all descendant directories in traversal order."""
+    directories: list[Path] = []
+    stack = [root]
+    while stack:
+        current = stack.pop()
+        directories.append(current)
+        stack.extend(reversed(_iter_child_directories(current)))
+    return directories
 
 
 def process_json_mode(
@@ -117,8 +152,15 @@ def process_json_mode(
                 output(f"Example:      {example}")
                 output(f"Folder name:  {parts[in_depth - 1]}")
             else:
+                fragment_parts = parts[in_depth - 1:out_depth]
                 output(f"Example:      {example}")
-                output(f"Key fragment: {os.sep.join(parts[in_depth - 1:out_depth])}")
+                output(
+                    "Key fragment: "
+                    + format_path_parts(
+                        fragment_parts,
+                        windows=":" in example[:3] or "\\" in example,
+                    )
+                )
 
     organized = organize_json_mode_files(file_list, in_depth, out_depth)
     if filter_mode == "select":
@@ -196,14 +238,9 @@ def process_directory_mode(
     output(f"  Output depth: {out_depth}")
 
     # --- Walk to find all folders at exactly in_depth ---
-    input_depth_folders: list[str] = []
-    for root, dirs, _ in os.walk(footage_path):
-        current_depth = len(path_parts(root))
-        if current_depth == in_depth:
-            input_depth_folders.append(root)
-            dirs.clear()  # do not descend further
-        elif current_depth > in_depth:
-            dirs.clear()
+    input_depth_folders = [
+        str(path) for path in _collect_directories_at_depth(footage_dir, in_depth)
+    ]
 
     if not input_depth_folders:
         raise ProxyGeneratorError(
@@ -223,21 +260,19 @@ def process_directory_mode(
 
         target_folders: list[str] = []
         max_depth_found = in_depth
+        directory_tree = _collect_directory_tree(Path(input_folder))
 
-        for root, dirs, _ in os.walk(input_folder):
+        for root in directory_tree:
             current_depth = len(path_parts(root))
             max_depth_found = max(max_depth_found, current_depth)
             if current_depth == out_depth:
-                target_folders.append(root)
-                dirs.clear()
-            elif current_depth > out_depth:
-                dirs.clear()
+                target_folders.append(str(root))
 
         if not target_folders and max_depth_found < out_depth:
             # Folder tree is shallower than requested — fall back to deepest level
-            for root, _, _ in os.walk(input_folder):
-                if len(path_parts(root)) == max_depth_found:
-                    target_folders.append(root)
+            target_folders = [
+                str(root) for root in directory_tree if len(path_parts(root)) == max_depth_found
+            ]
 
         targets_by_input[input_folder] = target_folders or [input_folder]
 

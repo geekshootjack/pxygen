@@ -1,9 +1,10 @@
 """Internal execution-plan models shared by modes and Resolve execution."""
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
+
+from .paths import split_subfolder_key
 
 
 @dataclass(frozen=True)
@@ -55,7 +56,7 @@ def build_resolve_execution_plan(
         batches: list[PlannedBatch] = []
 
         for subfolder_key, items in sorted(organized_files[footage_folder_path].items()):
-            bin_parts = tuple(part for part in subfolder_key.split(os.sep) if part)
+            bin_parts = split_subfolder_key(subfolder_key)
             proxy_target = Path(proxy_folder_path) / footage_folder_name
             if bin_parts:
                 proxy_target = proxy_target.joinpath(*bin_parts)

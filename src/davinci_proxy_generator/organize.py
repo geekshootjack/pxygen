@@ -1,11 +1,10 @@
 """File and folder organisation by path depth."""
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from .paths import compute_key_path, path_parts
+from .paths import compute_key_path, path_parts, subfolder_key_from_parts
 
 
 @dataclass(frozen=True)
@@ -66,7 +65,7 @@ def organize_json_mode_files(
             continue
         if out_depth > in_depth:
             subfolder_parts = parts[in_depth:out_depth]
-            subfolder_key = os.sep.join(subfolder_parts) if subfolder_parts else ""
+            subfolder_key = subfolder_key_from_parts(subfolder_parts)
         else:
             subfolder_key = ""
         organized.setdefault(key_path, {}).setdefault(subfolder_key, []).append(file_path)

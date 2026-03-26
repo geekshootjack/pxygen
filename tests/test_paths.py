@@ -1,5 +1,5 @@
 """Tests for davinci_proxy_generator.paths."""
-import os
+from pathlib import PurePosixPath
 
 import pytest
 
@@ -91,7 +91,7 @@ class TestComputeKeyPath:
     def test_basic_depth(self):
         parts = ["Volumes", "SSD", "Footage", "Day1", "CamA"]
         result = compute_key_path(parts, 3, leading_sep=False)
-        assert result == os.path.join("Volumes", "SSD", "Footage")
+        assert result == PurePosixPath("Volumes", "SSD", "Footage").as_posix()
 
     def test_windows_drive_letter_has_separator(self):
         parts = ["E:", "Footage", "Day1", "CamA"]
@@ -112,7 +112,7 @@ class TestComputeKeyPath:
     def test_depth_equals_parts_length(self):
         parts = ["a", "b", "c"]
         result = compute_key_path(parts, 3, leading_sep=False)
-        assert result == os.path.join("a", "b", "c")
+        assert result == PurePosixPath("a", "b", "c").as_posix()
 
     def test_depth_one(self):
         result = compute_key_path(["Volumes", "SSD", "Footage"], 1, leading_sep=False)
@@ -121,17 +121,17 @@ class TestComputeKeyPath:
     def test_leading_sep_true_adds_prefix(self):
         parts = ["Volumes", "SSD", "Footage"]
         result = compute_key_path(parts, 3, leading_sep=True)
-        assert result.startswith(os.sep)
+        assert result == PurePosixPath("/", "Volumes", "SSD", "Footage").as_posix()
 
     def test_leading_sep_false_no_prefix(self):
         parts = ["Volumes", "SSD", "Footage"]
         result = compute_key_path(parts, 2, leading_sep=False)
-        assert not result.startswith(os.sep)
+        assert result == PurePosixPath("Volumes", "SSD").as_posix()
 
     def test_no_double_separator(self):
         parts = ["Volumes", "SSD"]
         result = compute_key_path(parts, 1, leading_sep=True)
-        assert not result.startswith(os.sep + os.sep)
+        assert result == PurePosixPath("/", "Volumes").as_posix()
 
 
 # ---------------------------------------------------------------------------
