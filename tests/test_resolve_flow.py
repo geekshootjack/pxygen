@@ -50,6 +50,8 @@ class FakeMediaPool:
         self.root_folder = FakeFolder("Root")
         self.timelines: list[FakeTimeline] = []
         self.current_folder = None
+        self.move_calls: list[tuple[list[FakeClip], FakeFolder]] = []
+        self.current_folder_calls: list[FakeFolder] = []
 
     def GetRootFolder(self):
         return self.root_folder
@@ -66,10 +68,12 @@ class FakeMediaPool:
         return timeline
 
     def MoveClips(self, clips, dest_bin: FakeFolder):
+        self.move_calls.append((list(clips), dest_bin))
         dest_bin.clips.extend(clips)
 
     def SetCurrentFolder(self, folder):
         self.current_folder = folder
+        self.current_folder_calls.append(folder)
 
 
 class FakeMediaStorage:
@@ -175,6 +179,13 @@ class TestProcessFilesInResolve:
             "FHD_prores_proxy",
         ]
         assert project.render_job_count == 2
+        assert [timeline.name for timeline in media_pool.timelines] == [
+            "0001-3840x2160",
+            "0002-3840x2160-multi-audio",
+        ]
+        assert len(media_pool.move_calls) == 2
+        assert [len(clips) for clips, _ in media_pool.move_calls] == [1, 1]
+        assert len(media_pool.current_folder_calls) <= 1
 
         day_folder = media_pool.root_folder.GetSubFolderList()[0]
         cam_folder = day_folder.GetSubFolderList()[0]
@@ -205,6 +216,7 @@ class TestProcessFilesInResolve:
         assert project.loaded_burn_in_presets == []
         assert project.loaded_render_presets == ["FHD_prores_proxy"]
         assert project.render_job_count == 1
+        assert [timeline.name for timeline in media_pool.timelines] == ["0001-1920x1080"]
         assert media_pool.timelines[0].settings["timelineResolutionWidth"] == "1920"
 
     def test_creates_one_render_job_per_resolution_bin(self, monkeypatch):
@@ -232,11 +244,40 @@ class TestProcessFilesInResolve:
             "FHD_h.265_420_8bit_5Mbps",
             "FHD_h.265_420_8bit_5Mbps",
         ]
-        assert sorted(timeline.name for timeline in media_pool.timelines) == [
-            "Video Resolution 1920x1080   #2",
-            "Video Resolution 4096x2160   #1",
+        assert [timeline.name for timeline in media_pool.timelines] == [
+            "0001-4096x2160",
+            "0002-1920x1080",
         ]
         assert all(
             settings["TargetDir"] == PurePosixPath("/proxy", "Day1", "CamA").as_posix()
             for settings in project.render_settings
         )
+
+    def test_moves_same_resolution_group_in_single_batch(self, monkeypatch):
+        items = ["/source/a.mov", "/source/b.mov", "/source/c.mov"]
+        imports = {
+            tuple(items): [
+                FakeClip("4096x2160", "2"),
+                FakeClip("4096x2160", "2"),
+                FakeClip("4096x2160", "8"),
+            ]
+        }
+        _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
+
+        monkeypatch.setattr("builtins.input", lambda: "n")
+        process_files_in_resolve(
+            {"/footage/Day1": {"CamA": items}},
+            ["/footage/Day1"],
+            "/proxy",
+            1,
+            is_directory_mode=True,
+            codec="auto",
+        )
+
+        assert project.render_job_count == 2
+        assert len(media_pool.move_calls) == 2
+        assert [len(clips) for clips, _ in media_pool.move_calls] == [2, 1]
+        assert [timeline.name for timeline in media_pool.timelines] == [
+            "0001-4096x2160",
+            "0002-4096x2160-multi-audio",
+        ]

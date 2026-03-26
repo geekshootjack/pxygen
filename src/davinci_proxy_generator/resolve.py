@@ -30,6 +30,14 @@ class _ResolveContext:
     root_folder: object
 
 
+@dataclass(frozen=True)
+class _ClipGroup:
+    resolution: str
+    is_multi_audio: bool
+    clips: tuple[object, ...]
+    dest_bin: object
+
+
 def calculate_proxy_dimensions(resolution_str: str) -> tuple[str, str]:
     """Return *(proxy_width, proxy_height)* scaled to 1080p from a source resolution.
 
@@ -98,6 +106,14 @@ def _get_or_create_subfolder(media_pool, parent, name: str):
     return media_pool.AddSubFolder(parent, name)
 
 
+def _build_timeline_name(index: int, resolution: str, *, is_multi_audio: bool) -> str:
+    """Build a sortable timeline name for a render job."""
+    base_name = f"{index:04d}-{resolution.lower()}"
+    if is_multi_audio:
+        return f"{base_name}-multi-audio"
+    return base_name
+
+
 def _build_bin_folder(media_pool, main_bin, bin_parts: tuple[str, ...]):
     bin_folder = main_bin
     for part in bin_parts:
@@ -133,7 +149,11 @@ def _add_render_job(
     project.AddRenderJob()
 
 
-def _classify_clips(media_pool, bin_folder, imported_clips: list) -> None:
+def _classify_clips(media_pool, bin_folder, imported_clips: list) -> list[_ClipGroup]:
+    group_order: list[tuple[str, bool]] = []
+    grouped_clips: dict[tuple[str, bool], list[object]] = {}
+    destination_bins: dict[tuple[str, bool], object] = {}
+
     for clip in imported_clips:
         if clip.GetClipProperty("Type") == "Still":
             continue
@@ -144,54 +164,70 @@ def _classify_clips(media_pool, bin_folder, imported_clips: list) -> None:
         except (ValueError, TypeError):
             audio_tracks = 0
 
+        is_multi_audio = audio_tracks > 4
+        key = (resolution, is_multi_audio)
         dest_bin = (
             _get_or_create_subfolder(media_pool, res_bin, "MultiAudio_5+")
-            if audio_tracks > 4
+            if is_multi_audio
             else res_bin
         )
-        media_pool.MoveClips([clip], dest_bin)
+        if key not in grouped_clips:
+            group_order.append(key)
+        destination_bins.setdefault(key, dest_bin)
+        grouped_clips.setdefault(key, []).append(clip)
+
+    clip_groups: list[_ClipGroup] = []
+    for resolution, is_multi_audio in group_order:
+        key = (resolution, is_multi_audio)
+        clips = grouped_clips[key]
+        dest_bin = destination_bins[key]
+        media_pool.MoveClips(clips, dest_bin)
+        clip_groups.append(
+            _ClipGroup(
+                resolution=resolution,
+                is_multi_audio=is_multi_audio,
+                clips=tuple(clips),
+                dest_bin=dest_bin,
+            )
+        )
+
+    if clip_groups:
         media_pool.SetCurrentFolder(bin_folder)
+
+    return clip_groups
 
 
 def _queue_render_jobs_for_bin(
     project,
     media_pool,
-    bin_folder,
+    clip_groups: list[_ClipGroup],
     target_dir: str,
     standard_preset: str,
     multi_audio_preset: str,
     counter,
     output: Callable[[str], None],
 ) -> None:
-    for res_bin in bin_folder.GetSubFolderList():
-        res_name = res_bin.GetName()
-        standard_clips = res_bin.GetClipList()
-        if standard_clips:
+    for clip_group in clip_groups:
+        if clip_group.is_multi_audio:
+            output(f"  Render target (multi-audio):  {target_dir}")
+            render_preset = multi_audio_preset
+        else:
             output(f"  Render target (standard audio): {target_dir}")
-            _add_render_job(
-                project,
-                media_pool,
-                standard_clips,
-                f"Video Resolution {res_name}   #{next(counter)}",
-                res_name,
-                standard_preset,
-                target_dir,
-            )
+            render_preset = standard_preset
 
-        for sub_bin in res_bin.GetSubFolderList():
-            if sub_bin.GetName() == "MultiAudio_5+":
-                multi_clips = sub_bin.GetClipList()
-                if multi_clips:
-                    output(f"  Render target (multi-audio):  {target_dir}")
-                    _add_render_job(
-                        project,
-                        media_pool,
-                        multi_clips,
-                        f"Video Resolution {res_name} MultiAudio   #{next(counter)}",
-                        res_name,
-                        multi_audio_preset,
-                        target_dir,
-                    )
+        _add_render_job(
+            project,
+            media_pool,
+            list(clip_group.clips),
+            _build_timeline_name(
+                next(counter),
+                clip_group.resolution,
+                is_multi_audio=clip_group.is_multi_audio,
+            ),
+            clip_group.resolution,
+            render_preset,
+            target_dir,
+        )
 
 
 def _default_confirm_render(output: Callable[[str], None]) -> bool:
@@ -231,11 +267,11 @@ def execute_resolve_plan(
                     )
                     continue
 
-                _classify_clips(context.media_pool, bin_folder, imported_clips)
+                clip_groups = _classify_clips(context.media_pool, bin_folder, imported_clips)
                 _queue_render_jobs_for_bin(
                     context.project,
                     context.media_pool,
-                    bin_folder,
+                    clip_groups,
                     batch.target_dir,
                     standard_preset,
                     multi_audio_preset,
