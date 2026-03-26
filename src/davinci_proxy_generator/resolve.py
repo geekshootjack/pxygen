@@ -72,6 +72,11 @@ def process_files_in_resolve(
     import DaVinciResolveScript as dvr_script  # noqa: PLC0415
 
     resolve = dvr_script.scriptapp("Resolve")
+    if resolve is None:
+        raise ProxyGeneratorError(
+            "Could not connect to DaVinci Resolve. "
+            "Make sure Resolve is running before executing this script."
+        )
     project_manager = resolve.GetProjectManager()
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

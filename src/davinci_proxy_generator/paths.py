@@ -77,7 +77,15 @@ def compute_key_path(
         raise ValueError("in_depth must be a positive integer")
     if len(parts) < in_depth:
         return None
-    key_path = os.path.join(*parts[:in_depth])
+    key_components = parts[:in_depth]
+
+    # On Windows, os.path.join('E:', 'foo') → 'E:foo' (no backslash).
+    # Reconstruct a proper absolute path by prepending the drive separator.
+    if os.name == "nt" and len(key_components) >= 1 and key_components[0].endswith(":"):
+        key_path = key_components[0] + os.sep + os.path.join(*key_components[1:]) if len(key_components) > 1 else key_components[0] + os.sep
+    else:
+        key_path = os.path.join(*key_components)
+
     if leading_sep is None:
         leading_sep = os.sep == "/"
     if leading_sep and not key_path.startswith(os.sep):

@@ -141,6 +141,11 @@ def main() -> None:
     except ValueError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)
+    except AttributeError as exc:
+        # Typically: Resolve API returned None (Resolve not running or API call failed)
+        print(f"Resolve API error: {exc}", file=sys.stderr)
+        print("Make sure DaVinci Resolve is running.", file=sys.stderr)
+        sys.exit(1)
     except KeyboardInterrupt:
         print("\nAborted.", file=sys.stderr)
         sys.exit(1)

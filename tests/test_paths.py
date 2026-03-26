@@ -90,6 +90,15 @@ class TestComputeKeyPath:
         result = compute_key_path(parts, 3, leading_sep=False)
         assert result == os.path.join("Volumes", "SSD", "Footage")
 
+    def test_windows_drive_letter_has_separator(self):
+        # os.path.join('E:', 'foo') → 'E:foo' on Windows (missing backslash).
+        # compute_key_path must produce 'E:\foo', not 'E:foo'.
+        parts = ["E:", "Footage", "Day1", "CamA"]
+        result = compute_key_path(parts, 3, leading_sep=False)
+        assert result.startswith("E:" + os.sep), f"Expected 'E:{os.sep}...' but got '{result}'"
+        assert "Footage" in result
+        assert "Day1" in result
+
     def test_zero_depth_raises(self):
         with pytest.raises(ValueError):
             compute_key_path(["a", "b"], 0)
