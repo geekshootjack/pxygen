@@ -54,6 +54,7 @@ export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
 set RESOLVE_SCRIPT_API=%PROGRAMDATA%\Blackmagic Design\DaVinci Resolve\Support\Developer\Scripting
 set RESOLVE_SCRIPT_LIB=C:\Program Files\Blackmagic Design\DaVinci Resolve\fusionscript.dll
 set PYTHONPATH=%PYTHONPATH%;%RESOLVE_SCRIPT_API%\Modules\
+set PATH=%PATH%;C:\Program Files\Blackmagic Design\DaVinci Resolve
 ```
 </details>
 
