@@ -158,6 +158,11 @@ def _add_render_job(
         render_preset,
     )
     timeline = media_pool.CreateTimelineFromClips(timeline_name, clips)
+    if hasattr(project, "SetCurrentTimeline"):
+        if not project.SetCurrentTimeline(timeline):
+            logger.warning("Warning: failed to set current timeline to %r", timeline_name)
+        else:
+            logger.debug("Set current timeline to %r before queueing render job", timeline_name)
     proxy_width, proxy_height = calculate_proxy_dimensions(resolution_str)
     timeline.SetSetting("useCustomSettings", "1")
     timeline.SetSetting("timelineResolutionWidth", proxy_width)

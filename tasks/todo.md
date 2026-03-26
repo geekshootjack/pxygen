@@ -10,6 +10,9 @@
 - [x] Move interactive selection out of pure organization helpers
 - [x] Align CLI help text and docs with the implemented flags
 - [x] Run the full test suite and document results
+- [x] Reproduce and lock the Resolve timeline resolution bug where queued jobs ignore the newly created timeline
+- [x] Bind each render job to the created timeline before applying render settings and queueing
+- [x] Verify mixed landscape/portrait timelines keep distinct proxy dimensions end-to-end
 
 ## Notes
 
@@ -24,6 +27,8 @@
 - Refactored `resolve.py` into smaller private steps plus `execute_resolve_plan()`, while keeping `process_files_in_resolve()` as a compatibility wrapper.
 - Removed terminal I/O from `organize.py` helpers by replacing interactive selection with pure option/selection helpers.
 - Updated `README.md`, `README.zh.md`, and `docs/usage.md` to match the real CLI flags.
+- Fixed Resolve render queue binding so each queued job explicitly targets its newly created timeline instead of silently inheriting the project's default current timeline.
+- Added a regression test for mixed landscape/portrait clips to prove queued jobs preserve distinct proxy dimensions (`1920x1080` vs `608x1080`).
 - Verification:
-  - `uv run pytest` -> 109 passed
+  - `uv run pytest` -> 115 passed
   - `uv run ruff check src tests` -> All checks passed

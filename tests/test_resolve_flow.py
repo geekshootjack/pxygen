@@ -91,8 +91,10 @@ class FakeProject:
         self.loaded_burn_in_presets: list[str] = []
         self.loaded_render_presets: list[str] = []
         self.render_settings: list[dict] = []
+        self.render_jobs: list[dict] = []
         self.render_job_count = 0
         self.started_rendering = False
+        self.current_timeline = None
 
     def GetMediaPool(self):
         return self.media_pool
@@ -106,7 +108,17 @@ class FakeProject:
     def SetRenderSettings(self, settings: dict):
         self.render_settings.append(dict(settings))
 
+    def SetCurrentTimeline(self, timeline):
+        self.current_timeline = timeline
+        return True
+
     def AddRenderJob(self):
+        self.render_jobs.append(
+            {
+                "timeline": self.current_timeline,
+                "settings": self.render_settings[-1] if self.render_settings else None,
+            }
+        )
         self.render_job_count += 1
 
     def StartRendering(self):
@@ -282,6 +294,39 @@ class TestProcessFilesInResolve:
             "0001-4096x2160",
             "0002-4096x2160-multi-audio",
         ]
+
+    def test_queues_each_render_job_on_its_created_timeline(self, monkeypatch):
+        items = ["/source/a.mov", "/source/b.mov"]
+        imports = {
+            tuple(items): [
+                FakeClip("3840x2160", "2"),
+                FakeClip("2160x3840", "2"),
+            ]
+        }
+        _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
+
+        monkeypatch.setattr("builtins.input", lambda: "n")
+        process_files_in_resolve(
+            {"/footage/Day1": {"CamA": items}},
+            ["/footage/Day1"],
+            "/proxy",
+            1,
+            is_directory_mode=True,
+            codec="h265",
+        )
+
+        assert [timeline.name for timeline in media_pool.timelines] == [
+            "0001-3840x2160",
+            "0002-2160x3840",
+        ]
+        assert [job["timeline"].name for job in project.render_jobs] == [
+            "0001-3840x2160",
+            "0002-2160x3840",
+        ]
+        assert media_pool.timelines[0].settings["timelineResolutionWidth"] == "1920"
+        assert media_pool.timelines[0].settings["timelineResolutionHeight"] == "1080"
+        assert media_pool.timelines[1].settings["timelineResolutionWidth"] == "608"
+        assert media_pool.timelines[1].settings["timelineResolutionHeight"] == "1080"
 
     def test_skips_clips_with_missing_resolution_without_crashing(
         self, monkeypatch, caplog
