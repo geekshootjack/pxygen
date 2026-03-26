@@ -1,6 +1,6 @@
 """High-level entry points for the two operational modes.
 
-Both modes ultimately call :func:`~davinci_proxy_generator.resolve.process_files_in_resolve`.
+Both modes ultimately call :func:`~pxygen.resolve.process_files_in_resolve`.
 All DaVinci Resolve interaction is deferred to that function; everything here is
 pure Python orchestration.
 """
@@ -113,7 +113,7 @@ def process_json_mode(
         filter_list: Comma-separated folder names (only used when
             filter_mode == ``'filter'``).
         codec: Render codec selection (see
-            :func:`~davinci_proxy_generator.resolve.process_files_in_resolve`).
+            :func:`~pxygen.resolve.process_files_in_resolve`).
     """
     input_func = input_func or input
     output = output or logger.info

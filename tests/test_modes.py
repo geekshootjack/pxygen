@@ -1,4 +1,4 @@
-"""Tests for davinci_proxy_generator.modes orchestration."""
+"""Tests for pxygen.modes orchestration."""
 from __future__ import annotations
 
 import json
@@ -6,10 +6,10 @@ from unittest.mock import patch
 
 import pytest
 
-from davinci_proxy_generator.modes import process_directory_mode, process_json_mode
-from davinci_proxy_generator.paths import path_parts
-from davinci_proxy_generator.plan import ResolveExecutionPlan
-from davinci_proxy_generator.resolve import ProxyGeneratorError
+from pxygen.modes import process_directory_mode, process_json_mode
+from pxygen.paths import path_parts
+from pxygen.plan import ResolveExecutionPlan
+from pxygen.resolve import ProxyGeneratorError
 
 
 class TestProcessJsonMode:
@@ -32,7 +32,7 @@ class TestProcessJsonMode:
             encoding="utf-8",
         )
 
-        with patch("davinci_proxy_generator.modes.execute_resolve_plan") as mock_execute:
+        with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
             process_json_mode(
                 str(json_path),
                 "/proxy",
@@ -76,7 +76,7 @@ class TestProcessJsonMode:
             encoding="utf-8",
         )
 
-        with patch("davinci_proxy_generator.modes.execute_resolve_plan") as mock_execute:
+        with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
             process_json_mode(
                 str(json_path),
                 "/proxy",
@@ -125,7 +125,7 @@ class TestProcessDirectoryMode:
         day1 = footage_root / "Day1"
         in_depth = len(path_parts(day1))
 
-        with patch("davinci_proxy_generator.modes.execute_resolve_plan") as mock_execute:
+        with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
             process_directory_mode(
                 str(footage_root),
                 "/proxy",
@@ -149,7 +149,7 @@ class TestProcessDirectoryMode:
         in_depth = len(path_parts(day1))
         out_depth = in_depth + 2
 
-        with patch("davinci_proxy_generator.modes.execute_resolve_plan") as mock_execute:
+        with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
             process_directory_mode(str(footage_root), "/proxy", in_depth, out_depth)
 
         plan = mock_execute.call_args.args[0]
@@ -166,7 +166,7 @@ class TestProcessDirectoryMode:
         in_depth = len(path_parts(day1))
         out_depth = in_depth + 1
 
-        with patch("davinci_proxy_generator.modes.execute_resolve_plan") as mock_execute, patch(
+        with patch("pxygen.modes.execute_resolve_plan") as mock_execute, patch(
             "builtins.input", return_value="2"
         ):
             process_directory_mode(

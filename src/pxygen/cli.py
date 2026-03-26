@@ -1,6 +1,6 @@
 """Command-line interface entry point.
 
-Parses arguments and dispatches to :mod:`davinci_proxy_generator.modes`.
+Parses arguments and dispatches to :mod:`pxygen.modes`.
 Supports both named flags and the legacy positional-argument syntax.
 """
 from __future__ import annotations

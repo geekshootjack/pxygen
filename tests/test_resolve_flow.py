@@ -1,4 +1,4 @@
-"""Tests for davinci_proxy_generator.resolve orchestration."""
+"""Tests for pxygen.resolve orchestration."""
 from __future__ import annotations
 
 import logging
@@ -6,7 +6,7 @@ import sys
 import types
 from pathlib import PurePosixPath
 
-from davinci_proxy_generator.resolve import process_files_in_resolve
+from pxygen.resolve import process_files_in_resolve
 
 
 class FakeClip:

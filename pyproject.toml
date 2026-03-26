@@ -9,11 +9,11 @@ description = "Automates proxy generation for DaVinci Resolve"
 requires-python = ">=3.9"
 
 [project.scripts]
-pxygen = "davinci_proxy_generator.cli:main"
-proxy-generator = "davinci_proxy_generator.cli:main"
+pxygen = "pxygen.cli:main"
+proxy-generator = "pxygen.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/davinci_proxy_generator"]
+packages = ["src/pxygen"]
 
 [dependency-groups]
 dev = [

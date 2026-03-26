@@ -32,7 +32,7 @@ Converted the legacy single-file `legacy/proxy_generator_legacy.py` into a prope
 ### 2. Package Structure (`src/` layout)
 
 ```
-src/davinci_proxy_generator/
+src/pxygen/
 ├── __init__.py        # __version__ = "1.5.2"
 ├── __main__.py
 ├── cli.py             # argparse entry point, dispatches to modes
@@ -182,7 +182,7 @@ This addendum summarizes all commits currently on the feature branch relative to
 ### Branch commit history
 
 1. `ef5a617` `refactor(resolve): split execution flow and add planning layer`
-   - Added internal planning dataclasses in `src/davinci_proxy_generator/plan.py`
+   - Added internal planning dataclasses in `src/pxygen/plan.py`
    - Refactored `modes.py` to build execution plans before calling Resolve
    - Split `resolve.py` into smaller orchestration helpers
    - Added orchestration-heavy tests in `tests/test_modes.py` and `tests/test_resolve_flow.py`

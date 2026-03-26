@@ -6,7 +6,7 @@ refactoring made it directly testable — this is a concrete benefit of
 the restructuring.
 """
 
-from davinci_proxy_generator.resolve import calculate_proxy_dimensions
+from pxygen.resolve import calculate_proxy_dimensions
 
 
 class TestCalculateProxyDimensions:

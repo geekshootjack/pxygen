@@ -6,6 +6,9 @@
 - [x] Update CLI help/examples to prefer `pxygen` while keeping old invocation compatibility if needed
 - [x] Refresh README, Chinese README, usage doc, and handoff references to the new project name
 - [x] Verify the rename via tests and lint, then commit as one change set
+- [x] Rename the internal Python package from `davinci_proxy_generator` to `pxygen`
+- [ ] Update imports, tests, and package entry points for the internal rename
+- [ ] Re-run verification and auto-commit the internal package rename
 - [x] Audit root-level files and decide keep/move/delete targets
 - [x] Move reference and handoff docs out of the repo root
 - [x] Remove duplicate top-level guidance/backlog files that already have canonical homes
@@ -37,7 +40,7 @@
 ## Review
 
 - Added `tests/test_modes.py` and `tests/test_resolve_flow.py` to lock orchestration behavior.
-- Introduced `src/davinci_proxy_generator/plan.py` with internal plan dataclasses used by modes and Resolve execution.
+- Introduced `src/pxygen/plan.py` with internal plan dataclasses used by modes and Resolve execution.
 - Refactored `modes.py` to build execution plans and inject input/output hooks instead of mixing planning with direct Resolve calls.
 - Refactored `resolve.py` into smaller private steps plus `execute_resolve_plan()`, while keeping `process_files_in_resolve()` as a compatibility wrapper.
 - Removed terminal I/O from `organize.py` helpers by replacing interactive selection with pure option/selection helpers.

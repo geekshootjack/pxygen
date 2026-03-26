@@ -1,9 +1,9 @@
-"""Tests for davinci_proxy_generator.paths."""
+"""Tests for pxygen.paths."""
 from pathlib import PurePosixPath
 
 import pytest
 
-from davinci_proxy_generator.paths import (
+from pxygen.paths import (
     clean_path_input,
     compute_key_path,
     is_json_file,

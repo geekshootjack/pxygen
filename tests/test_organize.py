@@ -1,6 +1,6 @@
-"""Tests for davinci_proxy_generator.organize."""
+"""Tests for pxygen.organize."""
 
-from davinci_proxy_generator.organize import (
+from pxygen.organize import (
     describe_folders_at_in_depth,
     filter_folders_at_in_depth,
     organize_directory_mode_folders,

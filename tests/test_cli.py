@@ -1,4 +1,4 @@
-"""Tests for davinci_proxy_generator.cli — argument parsing and dispatch."""
+"""Tests for pxygen.cli — argument parsing and dispatch."""
 from __future__ import annotations
 
 import logging
@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from davinci_proxy_generator.cli import _build_parser, main
+from pxygen.cli import _build_parser, main
 
 # ---------------------------------------------------------------------------
 # _build_parser — flag parsing
@@ -89,8 +89,8 @@ class TestParser:
 # main() — dispatch logic
 # ---------------------------------------------------------------------------
 
-_MOCK_DIR = "davinci_proxy_generator.cli.process_directory_mode"
-_MOCK_JSON = "davinci_proxy_generator.cli.process_json_mode"
+_MOCK_DIR = "pxygen.cli.process_directory_mode"
+_MOCK_JSON = "pxygen.cli.process_json_mode"
 
 
 class TestDispatch:
@@ -104,7 +104,7 @@ class TestDispatch:
         with (
             patch(_MOCK_DIR) as mock_dir,
             patch(_MOCK_JSON) as mock_json,
-            patch("davinci_proxy_generator.cli.configure_logging") as mock_logging,
+            patch("pxygen.cli.configure_logging") as mock_logging,
         ):
             self._run(["-i", str(footage), "-o", "/proxy"])
             mock_dir.assert_called_once()
@@ -177,7 +177,7 @@ class TestDispatch:
 
     def test_attribute_error_logged(self, caplog):
         with patch("sys.argv", ["pxygen", "-i", "/tmp/a.json", "-o", "/proxy"]), patch(
-            "davinci_proxy_generator.cli.configure_logging"
+            "pxygen.cli.configure_logging"
         ), patch(_MOCK_JSON, side_effect=AttributeError("boom")), caplog.at_level(logging.ERROR):
             with pytest.raises(SystemExit):
                 main()
