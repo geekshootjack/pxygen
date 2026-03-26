@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 from .organize import (
@@ -28,6 +29,60 @@ from .table_output import output_table
 logger = logging.getLogger(__name__)
 OutputFn = Callable[[str], None]
 InputFn = Callable[[], str]
+
+
+@dataclass(frozen=True)
+class _DepthSpec:
+    requested: int
+    resolved: int
+    mode: str
+
+
+def _common_parent_depth(paths: list[str]) -> int:
+    """Return the shared parent-directory depth across file paths."""
+    parent_parts_lists = [path_parts(path)[:-1] for path in paths if path_parts(path)]
+    if not parent_parts_lists:
+        return 0
+    if len({tuple(parts) for parts in parent_parts_lists}) < 2:
+        return 0
+
+    prefix = list(parent_parts_lists[0])
+    for parts in parent_parts_lists[1:]:
+        max_common = min(len(prefix), len(parts))
+        common_length = 0
+        while common_length < max_common and prefix[common_length] == parts[common_length]:
+            common_length += 1
+        prefix = prefix[:common_length]
+        if not prefix:
+            break
+    return len(prefix)
+
+
+def _normalize_depth(root_depth: int, depth: int) -> _DepthSpec:
+    """Interpret *depth* relative to the input root when possible.
+
+    Rules:
+    - ``0`` targets the input root itself.
+    - Positive values smaller than the input-root depth are treated as levels
+      beneath the input root (``1`` = immediate children).
+    - Values greater than or equal to the input-root depth are preserved as
+      legacy absolute depths for backward compatibility.
+    """
+    if depth < 0:
+        raise ValueError("Depth values must be ≥ 0")
+    if root_depth <= 0:
+        return _DepthSpec(requested=depth, resolved=depth, mode="absolute")
+    if depth == 0:
+        return _DepthSpec(requested=depth, resolved=root_depth, mode="relative")
+    if depth < root_depth:
+        return _DepthSpec(requested=depth, resolved=root_depth + depth, mode="relative")
+    return _DepthSpec(requested=depth, resolved=depth, mode="absolute")
+
+
+def _format_depth_value(spec: _DepthSpec) -> str:
+    if spec.mode == "relative":
+        return f"{spec.requested} (relative -> absolute {spec.resolved})"
+    return f"{spec.requested} (legacy absolute)"
 
 
 def _print_folder_options(options, in_depth: int, output: OutputFn) -> None:
@@ -84,8 +139,10 @@ def _collect_directories_at_depth(root: Path, target_depth: int) -> list[Path]:
 
 
 def list_footage_folders(footage_path: str, depth: int) -> list[str]:
-    """Return folder paths (as strings) at *depth* within *footage_path*."""
-    return [str(p) for p in _collect_directories_at_depth(Path(footage_path), depth)]
+    """Return folder paths at the requested depth semantics within *footage_path*."""
+    root_depth = len(path_parts(footage_path))
+    resolved_depth = _normalize_depth(root_depth, depth).resolved
+    return [str(p) for p in _collect_directories_at_depth(Path(footage_path), resolved_depth)]
 
 
 def _collect_directory_tree(root: Path) -> list[Path]:
@@ -120,8 +177,10 @@ def process_json_mode(
         json_path: Path to the JSON comparison file.
         proxy_path: Root output directory for proxies.
         dataset: Which group to use from the comparison (1 or 2).
-        in_depth: Absolute path depth of the footage-folder level.
-        out_depth: Absolute path depth of the camera-reel level (≥ in_depth).
+        in_depth: Folder level relative to the inferred footage root, while
+            still accepting legacy absolute-depth values.
+        out_depth: Batch level relative to the inferred footage root, while
+            still accepting legacy absolute-depth values.
         clean_image: Skip burn-in overlay when ``True``.
         filter_mode: ``'select'`` or ``'filter'`` or ``None``.
         filter_list: Comma-separated folder names (only used when
@@ -141,8 +200,6 @@ def process_json_mode(
         out_depth,
     )
 
-    if out_depth < in_depth:
-        raise ValueError("Output depth must be ≥ input depth")
     if dataset not in (1, 2):
         raise ProxyGeneratorError(f"Invalid dataset value '{dataset}'. Must be 1 or 2.")
 
@@ -174,28 +231,34 @@ def process_json_mode(
     if not file_list:
         raise ProxyGeneratorError(f"No files found in group{dataset}")
 
+    root_depth = _common_parent_depth(file_list)
+    in_depth_spec = _normalize_depth(root_depth, in_depth)
+    out_depth_spec = _normalize_depth(root_depth, out_depth)
+    if out_depth_spec.resolved < in_depth_spec.resolved:
+        raise ValueError("Output depth must be ≥ input depth")
+
     output(f"Found {len(file_list)} files in group{dataset}")
     logger.info("Found %d file(s) in group%d", len(file_list), dataset)
     summary_rows: list[tuple[object, ...]] = [
         ("JSON file", json_path),
         ("Dataset", f"group{dataset}"),
-        ("Input depth", in_depth),
-        ("Output depth", out_depth),
+        ("Input depth", _format_depth_value(in_depth_spec)),
+        ("Output depth", _format_depth_value(out_depth_spec)),
         ("File count", len(file_list)),
     ]
     if file_list:
         example = file_list[0]
         parts = path_parts(example)
-        if len(parts) >= in_depth:
-            if in_depth == out_depth:
+        if len(parts) >= in_depth_spec.resolved:
+            if in_depth_spec.resolved == out_depth_spec.resolved:
                 summary_rows.extend(
                     [
                         ("Example", example),
-                        ("Folder name", parts[in_depth - 1]),
+                        ("Folder name", parts[in_depth_spec.resolved - 1]),
                     ]
                 )
             else:
-                fragment_parts = parts[in_depth - 1:out_depth]
+                fragment_parts = parts[in_depth_spec.resolved - 1:out_depth_spec.resolved]
                 summary_rows.extend(
                     [
                         ("Example", example),
@@ -210,7 +273,7 @@ def process_json_mode(
                 )
     output_table("JSON mode:", ("Parameter", "Value"), summary_rows, output)
 
-    organized = organize_json_mode_files(file_list, in_depth, out_depth)
+    organized = organize_json_mode_files(file_list, in_depth_spec.resolved, out_depth_spec.resolved)
     logger.debug("JSON mode produced %d top-level folder group(s)", len(organized))
     if filter_mode == "select":
         options = describe_folders_at_in_depth(organized, show_full_path=True)
@@ -224,7 +287,12 @@ def process_json_mode(
         organized = filter_folders_at_in_depth(organized, filter_list)
         if not organized:
             available_names = sorted(
-                Path(key).name for key in organize_json_mode_files(file_list, in_depth, out_depth)
+                Path(key).name
+                for key in organize_json_mode_files(
+                    file_list,
+                    in_depth_spec.resolved,
+                    out_depth_spec.resolved,
+                )
             )
             available = ", ".join(available_names)
             logger.warning("No matching folders found for filter: %s", filter_list)
@@ -269,8 +337,10 @@ def process_directory_mode(
     Args:
         footage_path: Root footage directory.
         proxy_path: Root output directory for proxies.
-        in_depth: Absolute path depth of the shooting-day folders.
-        out_depth: Absolute path depth of the camera-reel folders (≥ in_depth).
+        in_depth: Folder level relative to the provided footage root, while
+            still accepting legacy absolute-depth values.
+        out_depth: Batch level relative to the provided footage root, while
+            still accepting legacy absolute-depth values.
         clean_image: Skip burn-in overlay when ``True``.
         filter_mode: ``'select'`` or ``'filter'`` or ``None``.
         filter_list: Comma-separated folder names (only used when
@@ -291,23 +361,24 @@ def process_directory_mode(
     footage_dir = Path(footage_path)
     if not footage_dir.exists():
         raise ProxyGeneratorError(f"Footage folder does not exist: {footage_path}")
-    if out_depth < in_depth:
-        raise ValueError("Output depth must be ≥ input depth")
-
     footage_depth = len(path_parts(footage_path))
+    in_depth_spec = _normalize_depth(footage_depth, in_depth)
+    out_depth_spec = _normalize_depth(footage_depth, out_depth)
+    if out_depth_spec.resolved < in_depth_spec.resolved:
+        raise ValueError("Output depth must be ≥ input depth")
     # --- Walk to find all folders at exactly in_depth ---
     input_depth_folders = [
-        str(path) for path in _collect_directories_at_depth(footage_dir, in_depth)
+        str(path) for path in _collect_directories_at_depth(footage_dir, in_depth_spec.resolved)
     ]
     logger.debug(
         "Directory mode discovered %d folder(s) at input depth %d",
         len(input_depth_folders),
-        in_depth,
+        in_depth_spec.resolved,
     )
     logger.info(
         "Discovered %d folder(s) at input depth %d for %s",
         len(input_depth_folders),
-        in_depth,
+        in_depth_spec.resolved,
         footage_path,
     )
 
@@ -322,8 +393,8 @@ def process_directory_mode(
         [
             ("Footage", f"{footage_path} (depth: {footage_depth})"),
             ("Proxy output", proxy_path),
-            ("Input depth", in_depth),
-            ("Output depth", out_depth),
+            ("Input depth", _format_depth_value(in_depth_spec)),
+            ("Output depth", _format_depth_value(out_depth_spec)),
             ("Found folders", len(input_depth_folders)),
         ],
         output,
@@ -334,21 +405,21 @@ def process_directory_mode(
     targets_by_input: dict[str, list[str]] = {}
 
     for input_folder in input_depth_folders:
-        if in_depth == out_depth:
+        if in_depth_spec.resolved == out_depth_spec.resolved:
             targets_by_input[input_folder] = [input_folder]
             continue
 
         target_folders: list[str] = []
-        max_depth_found = in_depth
+        max_depth_found = in_depth_spec.resolved
         directory_tree = _collect_directory_tree(Path(input_folder))
 
         for root in directory_tree:
             current_depth = len(path_parts(root))
             max_depth_found = max(max_depth_found, current_depth)
-            if current_depth == out_depth:
+            if current_depth == out_depth_spec.resolved:
                 target_folders.append(str(root))
 
-        if not target_folders and max_depth_found < out_depth:
+        if not target_folders and max_depth_found < out_depth_spec.resolved:
             # Folder tree is shallower than requested — fall back to deepest level
             target_folders = [
                 str(root) for root in directory_tree if len(path_parts(root)) == max_depth_found
@@ -415,10 +486,14 @@ def process_directory_mode(
     output(f"\nTotal folders to process: {len(all_target_folders)}")
     logger.info("Total folders to process: %d", len(all_target_folders))
 
-    if in_depth == out_depth:
-        organized = organize_directory_mode_folders(all_target_folders, in_depth)
+    if in_depth_spec.resolved == out_depth_spec.resolved:
+        organized = organize_directory_mode_folders(all_target_folders, in_depth_spec.resolved)
     else:
-        organized = organize_json_mode_files(all_target_folders, in_depth, out_depth)
+        organized = organize_json_mode_files(
+            all_target_folders,
+            in_depth_spec.resolved,
+            out_depth_spec.resolved,
+        )
 
     if not organized:
         organized = {footage_path: {"": all_target_folders}}

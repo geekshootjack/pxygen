@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from pxygen.modes import process_directory_mode, process_json_mode
+from pxygen.modes import list_footage_folders, process_directory_mode, process_json_mode
 from pxygen.paths import path_parts
 from pxygen.plan import ResolveExecutionPlan
 from pxygen.resolve import ProxyGeneratorError
@@ -175,8 +175,51 @@ class TestProcessJsonMode:
 
         assert mock_print.called
 
+    def test_relative_depths_group_json_paths_from_common_root(self, tmp_path):
+        json_path = tmp_path / "comparison.json"
+        json_path.write_text(
+            json.dumps(
+                {
+                    "files_only_in_group1": [
+                        "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
+                        "/Volumes/SSD/Footage/Day1/CamB/clip2.mov",
+                        "/Volumes/SSD/Footage/Day2/CamA/clip3.mov",
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
+            process_json_mode(
+                str(json_path),
+                "/proxy",
+                1,
+                1,
+                2,
+            )
+
+        plan = mock_execute.call_args.args[0]
+        assert [folder.footage_folder_name for folder in plan.footage_folders] == ["Day1", "Day2"]
+        day1_batches = {
+            batch.subfolder_key: list(batch.items)
+            for batch in plan.footage_folders[0].batches
+        }
+        assert sorted(day1_batches) == ["CamA", "CamB"]
+        assert day1_batches["CamA"] == ["/Volumes/SSD/Footage/Day1/CamA/clip1.mov"]
+
 
 class TestProcessDirectoryMode:
+    def test_list_footage_folders_accepts_relative_levels(self, tmp_path):
+        footage_root = tmp_path / "footage"
+        (footage_root / "Day1").mkdir(parents=True)
+        (footage_root / "Day2").mkdir(parents=True)
+
+        assert list_footage_folders(str(footage_root), 1) == [
+            str(footage_root / "Day1"),
+            str(footage_root / "Day2"),
+        ]
+
     def test_in_depth_equals_out_depth_groups_input_folders(self, tmp_path):
         footage_root = tmp_path / "footage"
         (footage_root / "Day1").mkdir(parents=True)
@@ -238,6 +281,29 @@ class TestProcessDirectoryMode:
 
         plan = mock_execute.call_args.args[0]
         assert [folder.footage_folder_path for folder in plan.footage_folders] == [str(day2)]
+
+    def test_relative_depths_group_directory_tree_from_input_root(self, tmp_path):
+        footage_root = tmp_path / "footage"
+        (footage_root / "Day1" / "CamA").mkdir(parents=True)
+        (footage_root / "Day1" / "CamB").mkdir(parents=True)
+        (footage_root / "Day2" / "CamA").mkdir(parents=True)
+
+        with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
+            process_directory_mode(
+                str(footage_root),
+                "/proxy",
+                1,
+                2,
+            )
+
+        plan = mock_execute.call_args.args[0]
+        assert [folder.footage_folder_name for folder in plan.footage_folders] == ["Day1", "Day2"]
+        day1_batches = {
+            batch.subfolder_key: list(batch.items)
+            for batch in plan.footage_folders[0].batches
+        }
+        assert sorted(day1_batches) == ["CamA", "CamB"]
+        assert day1_batches["CamA"] == [str(footage_root / "Day1" / "CamA")]
 
     def test_outputs_directory_summary_and_selection_as_tables(self, tmp_path):
         footage_root = tmp_path / "footage"

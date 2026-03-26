@@ -37,24 +37,29 @@ pxygen -i comparison.json -o /Volumes/SSD/Proxy -g 1 -n 4 -d 5
 
 ### Depth Control
 
-The depth values are **absolute** — counted from the filesystem root (including the drive letter on Windows).
+Depth values now support a more intuitive relative interpretation:
+
+- `0` means the input folder itself
+- `1` means the first level below the input folder
+- `2` means the second level below the input folder
+
+Legacy absolute depths are still accepted for backward compatibility, so existing commands such as `-n 4 -d 5` continue to work.
 
 | Flag | Default (macOS / other) | Description |
 |------|-------------------------|-------------|
 | `-n, --in-depth N` | 5 / 4 | Depth of the shooting-day folders |
 | `-d, --out-depth N` | 5 / 4 | Depth of the camera-reel folders (≥ in-depth) |
 
-**Example** — given the path `/Volumes/SSD/Footage/Day1/A001`:
+**Example** — if your input folder is `/Volumes/SSD/Footage`:
 
-| Depth | Component |
-|-------|-----------|
-| 1 | `Volumes` |
-| 2 | `SSD` |
-| 3 | `Footage` |
-| 4 | `Day1` |
-| 5 | `A001` |
+| Depth | Meaning |
+|-------|---------|
+| `0` | `/Volumes/SSD/Footage` |
+| `1` | `Day1` |
+| `2` | `A001` |
 
-So `-n 4 -d 5` means: group by Day (depth 4), include camera reels as subfolders (depth 5).
+So `-n 1 -d 2` means: group by Day, include camera reels as subfolders.
+Legacy `-n 4 -d 5` still resolves to the same structure when used with that input root.
 
 ### Folder Selection *(mutually exclusive)*
 
@@ -67,9 +72,9 @@ So `-n 4 -d 5` means: group by Day (depth 4), include camera reels as subfolders
 
 ```
 Folders at depth 4:
-  1. /Volumes/SSD/Footage/Shooting_Day_1  (3 sub-folders)
-  2. /Volumes/SSD/Footage/Shooting_Day_2  (2 sub-folders)
-  3. /Volumes/SSD/Footage/Shooting_Day_3  (4 sub-folders)
+  1. /Volumes/SSD/Footage/Shooting_Day_1
+  2. /Volumes/SSD/Footage/Shooting_Day_2
+  3. /Volumes/SSD/Footage/Shooting_Day_3
 
 Select folders to process (numbers, range like 2-4, or 'all'):
 > 1,3
@@ -104,20 +109,20 @@ The `auto` default exists because Adobe Premiere cannot hardware-decode 4:2:0 8-
 
 ```sh
 # Single depth level (shooting-day folders only)
-pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 4
+pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 1 -d 1
 
 # Two depth levels (shooting day + camera reel)
-pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5
+pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 1 -d 2
 
 # Force ProRes for all clips
-pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 -k prores
+pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 1 -d 2 -k prores
 
 # Clean proxies (no burn-in), specific days
-pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 \
+pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 1 -d 2 \
   -c --filter "Shooting_Day_3,Shooting_Day_4"
 
 # JSON mode, group 2, interactive selection
-pxygen -i comparison.json -o /Volumes/SSD/Proxy -g 2 -n 4 -d 5 --select
+pxygen -i comparison.json -o /Volumes/SSD/Proxy -g 2 -n 1 -d 2 --select
 ```
 
 ---

@@ -45,6 +45,9 @@
 - [x] Add regression coverage so table rendering only emits through the presenter callback once
 - [x] Change the default logging level to `warning` for less noisy day-to-day CLI use
 - [x] Remove the misleading `Sub-folders` column from the directory selection table
+- [x] Interpret `input depth` / `output depth` relative to the provided input root while preserving legacy absolute-depth compatibility
+- [x] Keep JSON mode aligned with the same depth semantics by inferring a common root from source file paths
+- [x] Update tests and docs so the new depth model is explicit and regression-covered
 
 ## Notes
 
@@ -69,6 +72,7 @@
 - Added optional `--log-file` support so the standard operational log stream can be persisted to a file for a run, while the TUI layer remains stdout-only and does not pollute the log file.
 - Fixed a presentation bug where rich tables were emitted twice because the shared table helper both printed to stdout and replayed exported text; table rendering now happens entirely in-memory before lines are handed to the presenter callback.
 - Changed the default CLI log level to `warning` now that the TUI carries the normal user-facing progress output, and removed the misleading `Sub-folders` column from the directory selection table because it was showing internal batch counts rather than real filesystem child-folder counts.
+- Refactored depth handling so `input depth` and `output depth` can be used as levels relative to the provided input root (`0` = input folder), while still accepting legacy absolute values for backward compatibility; directory mode, JSON mode, WebUI text, and CLI docs were updated together.
 - Cleaned the repo root by moving handoff/reference material into `docs/`, moving the legacy script into `legacy/`, and deleting duplicate top-level `CLAUDE.md` / `TODO.md`.
 - Renamed the project branding and package metadata from ProxyPilot / `davinci-proxy-generator` to `pxygen`, while keeping `proxy-generator` as a compatibility CLI alias.
 - Fixed the JPG import gate so directory-mode batches are expanded to file paths before Resolve import, preventing JPG/JPEG files inside source folders from leaking into Resolve.
