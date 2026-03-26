@@ -113,8 +113,10 @@ class FakeMediaPool:
 class FakeMediaStorage:
     def __init__(self, imports):
         self.imports = imports
+        self.calls: list[list[str]] = []
 
     def AddItemListToMediaPool(self, items):
+        self.calls.append(list(items))
         return self.imports.get(tuple(items), [])
 
 
@@ -241,6 +243,38 @@ class TestProcessFilesInResolve:
         assert len(resolution_folder.GetClipList()) == 1
         assert resolution_folder.GetSubFolderList()[0].GetName() == "MultiAudio_5+"
         assert len(resolution_folder.GetSubFolderList()[0].GetClipList()) == 1
+
+    def test_skips_jpg_inputs_before_resolve_import(self, monkeypatch):
+        items = [
+            "/source/clip1.mov",
+            "/source/poster.JPG",
+            "/source/still.jpeg",
+            "/source/clip2.mp4",
+        ]
+        filtered_items = ["/source/clip1.mov", "/source/clip2.mp4"]
+        imports = {
+            tuple(filtered_items): [
+                FakeClip("3840x2160", "2"),
+                FakeClip("3840x2160", "2"),
+            ]
+        }
+        project_manager, project, media_pool = _install_fake_resolve(monkeypatch, imports)
+        media_storage = sys.modules["DaVinciResolveScript"].scriptapp("Resolve").GetMediaStorage()
+
+        monkeypatch.setattr("builtins.input", lambda: "n")
+        process_files_in_resolve(
+            {"/footage/Day1": {"CamA": items}},
+            ["/footage/Day1"],
+            "/proxy",
+            1,
+            is_directory_mode=True,
+            codec="h265",
+        )
+
+        assert media_storage.calls == [filtered_items]
+        assert project_manager.saved is True
+        assert project.render_job_count == 1
+        assert [timeline.name for timeline in media_pool.timelines] == ["0001-3840x2160"]
 
     def test_forced_prores_and_confirm_yes_start_rendering(self, monkeypatch):
         items = ["/source/clip1.mov"]

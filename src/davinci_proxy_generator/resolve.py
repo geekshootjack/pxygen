@@ -20,6 +20,8 @@ from .plan import ResolveExecutionPlan, build_resolve_execution_plan
 
 logger = logging.getLogger(__name__)
 
+_SKIPPED_IMPORT_SUFFIXES = {".jpg", ".jpeg"}
+
 class ProxyGeneratorError(Exception):
     """Raised for expected, user-facing errors in proxy generation."""
 
@@ -149,6 +151,24 @@ def _build_bin_folder(media_pool, main_bin, bin_parts: tuple[str, ...]):
     for part in bin_parts:
         bin_folder = _get_or_create_subfolder(media_pool, bin_folder, part)
     return bin_folder
+
+
+def _filter_import_items(items: tuple[str, ...]) -> tuple[str, ...]:
+    """Drop items that should never be sent to Resolve for import."""
+    filtered_items: list[str] = []
+    skipped_items: list[str] = []
+
+    for item in items:
+        if Path(item).suffix.lower() in _SKIPPED_IMPORT_SUFFIXES:
+            skipped_items.append(item)
+            continue
+        filtered_items.append(item)
+
+    if skipped_items:
+        logger.info("Skipping %d JPG/JPEG item(s) before Resolve import", len(skipped_items))
+        logger.debug("Skipped import items: %s", skipped_items)
+
+    return tuple(filtered_items)
 
 
 def _add_render_job(
@@ -356,7 +376,15 @@ def execute_resolve_plan(
         for batch in footage_folder.batches:
             bin_folder = _build_bin_folder(context.media_pool, main_bin, batch.bin_parts)
             try:
-                imported_clips = context.media_storage.AddItemListToMediaPool(list(batch.items))
+                items_to_import = _filter_import_items(batch.items)
+                if not items_to_import:
+                    logger.info(
+                        "Skipping batch %s because no importable items remain after JPG filtering",
+                        batch.subfolder_key or footage_folder.footage_folder_name,
+                    )
+                    continue
+
+                imported_clips = context.media_storage.AddItemListToMediaPool(list(items_to_import))
                 if not imported_clips:
                     logger.warning(
                         "Warning: failed to import items from %s",
