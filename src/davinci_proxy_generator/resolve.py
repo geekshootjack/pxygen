@@ -42,24 +42,37 @@ class _ClipGroup:
 
 
 def calculate_proxy_dimensions(resolution_str: str) -> tuple[str, str]:
-    """Return *(proxy_width, proxy_height)* scaled to 1080p from a source resolution.
+    """Return *(proxy_width, proxy_height)* scaled to a 1080 short edge.
 
-    The width is calculated to preserve the aspect ratio and rounded up to the
-    nearest even number (required by most codecs).
+    Landscape sources scale to ``1920x1080``-style proxies, while portrait
+    sources scale to ``1080x1920``-style proxies. The resized dimension is
+    rounded to the nearest even number (required by most codecs).
 
     Args:
         resolution_str: Source resolution formatted as ``'WIDTHxHEIGHT'``
             (e.g. ``'4096x2160'``).
 
     Returns:
-        A *(width, height)* tuple of strings (e.g. ``('1920', '1080')``).
+        A *(width, height)* tuple of strings (e.g. ``('1920', '1080')`` or
+        ``('1080', '1920')``).
     """
     width_s, height_s = resolution_str.split("x")
-    aspect = int(width_s) / int(height_s)
-    proxy_height = 1080
-    proxy_width = round(proxy_height * aspect)
+    source_width = int(width_s)
+    source_height = int(height_s)
+
+    if source_width >= source_height:
+        scale = 1080 / source_height
+    else:
+        scale = 1080 / source_width
+
+    proxy_width = round(source_width * scale)
+    proxy_height = round(source_height * scale)
+
     if proxy_width % 2 == 1:
         proxy_width += 1
+    if proxy_height % 2 == 1:
+        proxy_height += 1
+
     return str(proxy_width), str(proxy_height)
 
 

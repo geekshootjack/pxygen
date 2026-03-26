@@ -365,8 +365,12 @@ class TestProcessFilesInResolve:
         assert [len(call["clips"]) for call in media_pool.create_from_clips_calls] == [1, 1]
         assert media_pool.timelines[0].settings["timelineResolutionWidth"] == "1920"
         assert media_pool.timelines[0].settings["timelineResolutionHeight"] == "1080"
-        assert media_pool.timelines[1].settings["timelineResolutionWidth"] == "608"
-        assert media_pool.timelines[1].settings["timelineResolutionHeight"] == "1080"
+        assert media_pool.timelines[1].settings["timelineResolutionWidth"] == "1080"
+        assert media_pool.timelines[1].settings["timelineResolutionHeight"] == "1920"
+        assert project.render_settings[0]["FormatWidth"] == 1920
+        assert project.render_settings[0]["FormatHeight"] == 1080
+        assert project.render_settings[1]["FormatWidth"] == 1080
+        assert project.render_settings[1]["FormatHeight"] == 1920
 
     def test_skips_clips_with_missing_resolution_without_crashing(
         self, monkeypatch, caplog
