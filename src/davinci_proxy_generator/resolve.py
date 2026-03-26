@@ -157,16 +157,46 @@ def _add_render_job(
         target_dir,
         render_preset,
     )
-    timeline = media_pool.CreateTimelineFromClips(timeline_name, clips)
+    proxy_width, proxy_height = calculate_proxy_dimensions(resolution_str)
+    if hasattr(media_pool, "CreateEmptyTimeline") and hasattr(media_pool, "AppendToTimeline"):
+        timeline = media_pool.CreateEmptyTimeline(timeline_name)
+        if timeline is None:
+            raise ProxyGeneratorError(f"Failed to create timeline {timeline_name!r}.")
+        logger.debug("Created empty timeline %r before appending clips", timeline_name)
+    else:
+        timeline = media_pool.CreateTimelineFromClips(timeline_name, clips)
+        if timeline is None:
+            raise ProxyGeneratorError(f"Failed to create timeline {timeline_name!r} from clips.")
+
     if hasattr(project, "SetCurrentTimeline"):
         if not project.SetCurrentTimeline(timeline):
-            logger.warning("Warning: failed to set current timeline to %r", timeline_name)
-        else:
-            logger.debug("Set current timeline to %r before queueing render job", timeline_name)
-    proxy_width, proxy_height = calculate_proxy_dimensions(resolution_str)
-    timeline.SetSetting("useCustomSettings", "1")
-    timeline.SetSetting("timelineResolutionWidth", proxy_width)
-    timeline.SetSetting("timelineResolutionHeight", proxy_height)
+            raise ProxyGeneratorError(f"Failed to set current timeline to {timeline_name!r}.")
+        logger.debug("Set current timeline to %r before queueing render job", timeline_name)
+
+    timeline_settings = {
+        "useCustomSettings": "1",
+        "timelineResolutionWidth": proxy_width,
+        "timelineResolutionHeight": proxy_height,
+    }
+    for setting_name, setting_value in timeline_settings.items():
+        if not timeline.SetSetting(setting_name, setting_value):
+            raise ProxyGeneratorError(
+                f"Failed to set timeline setting {setting_name!r} to {setting_value!r} "
+                f"for {timeline_name!r}."
+            )
+    if hasattr(timeline, "GetSetting"):
+        for setting_name, setting_value in timeline_settings.items():
+            actual_value = timeline.GetSetting(setting_name)
+            if actual_value != setting_value:
+                raise ProxyGeneratorError(
+                    f"Timeline setting {setting_name!r} for {timeline_name!r} "
+                    f"did not stick (expected {setting_value!r}, got {actual_value!r})."
+                )
+    if hasattr(media_pool, "AppendToTimeline"):
+        appended_items = media_pool.AppendToTimeline(clips)
+        if appended_items is None:
+            raise ProxyGeneratorError(f"Failed to append clips to timeline {timeline_name!r}.")
+        logger.debug("Appended %d clip(s) to timeline %r", len(clips), timeline_name)
     project.LoadRenderPreset(render_preset)
     project.SetRenderSettings(
         {

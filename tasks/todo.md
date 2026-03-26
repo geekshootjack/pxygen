@@ -13,6 +13,9 @@
 - [x] Reproduce and lock the Resolve timeline resolution bug where queued jobs ignore the newly created timeline
 - [x] Bind each render job to the created timeline before applying render settings and queueing
 - [x] Verify mixed landscape/portrait timelines keep distinct proxy dimensions end-to-end
+- [x] Lock a Resolve flow where timeline custom settings are applied before clips are appended
+- [x] Switch render-job creation to empty timeline + verified settings + append clips
+- [x] Re-verify that invalid-resolution warnings are isolated from valid timeline sizing
 
 ## Notes
 
@@ -29,6 +32,8 @@
 - Updated `README.md`, `README.zh.md`, and `docs/usage.md` to match the real CLI flags.
 - Fixed Resolve render queue binding so each queued job explicitly targets its newly created timeline instead of silently inheriting the project's default current timeline.
 - Added a regression test for mixed landscape/portrait clips to prove queued jobs preserve distinct proxy dimensions (`1920x1080` vs `608x1080`).
+- Switched render job creation from `CreateTimelineFromClips()` to `CreateEmptyTimeline()` + verified custom settings + `AppendToTimeline()` so Resolve gets the timeline size before any clips are placed.
+- Added runtime checks for timeline setting application so Resolve cannot silently queue a job after rejecting custom timeline dimensions.
 - Verification:
   - `uv run pytest` -> 115 passed
   - `uv run ruff check src tests` -> All checks passed

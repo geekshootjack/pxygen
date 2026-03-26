@@ -25,9 +25,14 @@ class FakeTimeline:
     def __init__(self, name: str):
         self.name = name
         self.settings = {}
+        self.clips = []
 
     def SetSetting(self, key: str, value: str):
         self.settings[key] = value
+        return True
+
+    def GetSetting(self, key: str):
+        return self.settings.get(key)
 
 
 class FakeFolder:
@@ -50,9 +55,11 @@ class FakeMediaPool:
     def __init__(self):
         self.root_folder = FakeFolder("Root")
         self.timelines: list[FakeTimeline] = []
+        self.active_timeline = None
         self.current_folder = None
         self.move_calls: list[tuple[list[FakeClip], FakeFolder]] = []
         self.current_folder_calls: list[FakeFolder] = []
+        self.append_calls: list[dict] = []
 
     def GetRootFolder(self):
         return self.root_folder
@@ -62,11 +69,31 @@ class FakeMediaPool:
         parent.subfolders.append(folder)
         return folder
 
+    def CreateEmptyTimeline(self, timeline_name: str):
+        timeline = FakeTimeline(timeline_name)
+        self.timelines.append(timeline)
+        return timeline
+
     def CreateTimelineFromClips(self, timeline_name: str, clips):
         timeline = FakeTimeline(timeline_name)
         timeline.clips = list(clips)
         self.timelines.append(timeline)
         return timeline
+
+    def AppendToTimeline(self, clips):
+        self.append_calls.append(
+            {
+                "timeline": self.active_timeline,
+                "clips": list(clips),
+                "settings_snapshot": dict(self.active_timeline.settings)
+                if self.active_timeline is not None
+                else {},
+            }
+        )
+        if self.active_timeline is None:
+            return []
+        self.active_timeline.clips.extend(clips)
+        return list(clips)
 
     def MoveClips(self, clips, dest_bin: FakeFolder):
         self.move_calls.append((list(clips), dest_bin))
@@ -110,6 +137,7 @@ class FakeProject:
 
     def SetCurrentTimeline(self, timeline):
         self.current_timeline = timeline
+        self.media_pool.active_timeline = timeline
         return True
 
     def AddRenderJob(self):
@@ -323,6 +351,20 @@ class TestProcessFilesInResolve:
             "0001-3840x2160",
             "0002-2160x3840",
         ]
+        assert [call["timeline"].name for call in media_pool.append_calls] == [
+            "0001-3840x2160",
+            "0002-2160x3840",
+        ]
+        assert media_pool.append_calls[0]["settings_snapshot"] == {
+            "useCustomSettings": "1",
+            "timelineResolutionWidth": "1920",
+            "timelineResolutionHeight": "1080",
+        }
+        assert media_pool.append_calls[1]["settings_snapshot"] == {
+            "useCustomSettings": "1",
+            "timelineResolutionWidth": "608",
+            "timelineResolutionHeight": "1080",
+        }
         assert media_pool.timelines[0].settings["timelineResolutionWidth"] == "1920"
         assert media_pool.timelines[0].settings["timelineResolutionHeight"] == "1080"
         assert media_pool.timelines[1].settings["timelineResolutionWidth"] == "608"
