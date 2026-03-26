@@ -172,3 +172,103 @@ set PATH=%PATH%;C:\Program Files\Blackmagic Design\DaVinci Resolve
 ```
 
 DaVinci Resolve must be running. Python must be the official python.org build (not python-build-standalone).
+
+---
+
+## Branch Handoff Addendum — `codex/resolve-refactor-tdd`
+
+This addendum summarizes all commits currently on the feature branch relative to `origin/main`, plus the current unresolved issue encountered in live Resolve testing.
+
+### Branch commit history
+
+1. `ef5a617` `refactor(resolve): split execution flow and add planning layer`
+   - Added internal planning dataclasses in `src/davinci_proxy_generator/plan.py`
+   - Refactored `modes.py` to build execution plans before calling Resolve
+   - Split `resolve.py` into smaller orchestration helpers
+   - Added orchestration-heavy tests in `tests/test_modes.py` and `tests/test_resolve_flow.py`
+
+2. `aec2099` `refactor(paths): replace os.path flows with pathlib`
+   - Removed `os.path` / `os.sep` handling from active package code and tests
+   - Standardized path handling on `pathlib`, `PureWindowsPath`, and `PurePosixPath`
+   - Reworked directory traversal to use `Path`-driven helpers
+
+3. `35d9150` `refactor(resolve): batch clip moves and rename timelines`
+   - Reduced Resolve API chatter by grouping imported clips in Python and moving them in batches per `(resolution, audio-group)`
+   - Reworked timeline names to sortable, lowercase, hyphenated names:
+     - `0001-4096x2160`
+     - `0002-4096x2160-multi-audio`
+
+4. `dd88cbc` `fix(resolve): guard invalid clip resolution`
+   - Added `_normalize_resolution()`
+   - Invalid/blank `Resolution` clip properties are skipped with a warning instead of crashing
+   - Prevented malformed timeline names like `0001-`
+
+5. `b119ab8` `refactor(logging): replace print output with structured logging`
+   - Replaced ad hoc `print()` output with `logging`
+   - Added `--log-level` to CLI
+   - `INFO` is the normal operational verbosity
+   - `DEBUG` logs micro-operations inside planning and Resolve execution
+
+6. `f3b1466` `fix(resolve): bind render jobs to current timeline`
+   - Explicitly calls `project.SetCurrentTimeline(timeline)` before queueing render jobs
+   - Added regression coverage for render-job/timeline association
+
+7. `42e7aec` `fix(resolve): create empty timelines before appending clips`
+   - Attempted to solve the real Resolve timeline sizing issue by:
+     - creating empty timelines
+     - applying custom timeline settings first
+     - appending clips afterward
+   - This looked valid in tests, but failed in real Resolve: timelines were created, but clips were not actually added
+
+8. `f995510` `fix(resolve): restore clip-backed timeline creation`
+   - Reverted the unreliable empty-timeline path
+   - Returned to `CreateTimelineFromClips(...)`
+   - Kept explicit current-timeline binding and timeline-setting verification logic
+
+### Current unresolved issue
+
+The branch still has an unresolved live-integration bug in DaVinci Resolve:
+
+- Multiple generated timelines are still ending up as `1920x1080` in real Resolve, even when their names indicate different source group resolutions such as `3840x2160` and `2160x3840`.
+- This problem is **not** explained by the warning:
+  - `Warning: skipping clip with invalid resolution property: ''`
+  - That warning only skips clips whose metadata is blank; it does not explain why valid timelines all collapse to FHD.
+- The current code path does set:
+  - `useCustomSettings = "1"`
+  - `timelineResolutionWidth = proxy_width`
+  - `timelineResolutionHeight = proxy_height`
+  - and also binds the created timeline as the current timeline before queueing the render job.
+
+### What was observed in live Resolve
+
+- The branch correctly groups clips by source resolution and audio-track count.
+- Timeline names are created correctly.
+- Render jobs are queued.
+- An earlier attempted fix using `CreateEmptyTimeline()` plus `AppendToTimeline()` was rejected by reality:
+  - debug logs claimed clips were appended
+  - in actual Resolve, the timelines were created but contained no clips
+- After reverting to `CreateTimelineFromClips()`, timeline population behavior returned, but the custom timeline resolution issue still remained unresolved in live Resolve.
+
+### Likely next investigation areas
+
+The next agent should start from runtime verification inside a real Resolve session, not from unit-test-only reasoning. Highest-value checks:
+
+1. Inspect the exact return values and read-back values for:
+   - `timeline.SetSetting("useCustomSettings", "1")`
+   - `timeline.SetSetting("timelineResolutionWidth", ...)`
+   - `timeline.SetSetting("timelineResolutionHeight", ...)`
+   - `timeline.GetSetting(...)`
+
+2. Check whether `project.LoadRenderPreset(...)` is resetting timeline or output sizing state after custom timeline settings are applied.
+
+3. Compare timeline settings vs project render settings before and after:
+   - `SetCurrentTimeline(timeline)`
+   - `LoadRenderPreset(...)`
+   - `SetRenderSettings(...)`
+   - `AddRenderJob()`
+
+4. Verify whether Resolve requires project-level settings changes, or a different order of operations, for timeline dimensions to survive into queued render jobs.
+
+### Important caution
+
+Do **not** assume fake tests prove correct Resolve behavior here. The current test suite passes, but this specific issue is now known to be a real integration gap between mocks and DaVinci Resolve itself.
