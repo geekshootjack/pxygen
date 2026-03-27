@@ -49,6 +49,8 @@
 - [x] Keep JSON mode aligned with the same depth semantics by inferring a common root from source file paths
 - [x] Update tests and docs so the new depth model is explicit and regression-covered
 - [ ] Revisit the terminal `Input -> Output` structure preview so it explains depth behavior without turning the main CLI flow into a preview-only early exit
+- [ ] Auto-launch DaVinci Resolve when the user runs `pxygen` while Resolve is not already running
+- [ ] Remove the remaining dependency on system-installed Python so `uv run pxygen` can rely on a self-managed Python runtime again
 
 ## Notes
 
