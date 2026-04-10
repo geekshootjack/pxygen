@@ -358,3 +358,12 @@ class TestProcessDirectoryMode:
         assert "Folder" in output_text
         assert "Sub-folders" not in output_text
         assert "━" in output_text
+
+    def test_gsdata_folders_are_excluded_from_traversal(self, tmp_path):
+        footage_root = tmp_path / "footage"
+        (footage_root / "Day1").mkdir(parents=True)
+        (footage_root / "_gsdata_").mkdir(parents=True)
+
+        result = list_footage_folders(str(footage_root), 1)
+
+        assert result == [str(footage_root / "Day1")]
