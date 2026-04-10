@@ -48,7 +48,7 @@ def path_parts(path: str | Path) -> list[str]:
 
 def _looks_windows_path(path_str: str) -> bool:
     """Return True when *path_str* should use Windows path semantics."""
-    return len(path_str) >= 2 and path_str[1] == ":" or "\\" in path_str
+    return (len(path_str) >= 2 and path_str[1] == ":") or "\\" in path_str
 
 
 def _looks_windows_parts(parts: list[str]) -> bool:

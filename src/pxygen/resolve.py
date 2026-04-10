@@ -208,14 +208,6 @@ def _add_render_job(
         target_dir,
         render_preset,
     )
-    logger.debug(
-        "Creating timeline %r for %d clip(s), resolution=%s, target=%s, preset=%s",
-        timeline_name,
-        len(clips),
-        resolution_str,
-        target_dir,
-        render_preset,
-    )
     proxy_width, proxy_height = calculate_proxy_dimensions(resolution_str)
     timeline = media_pool.CreateTimelineFromClips(timeline_name, clips)
     if timeline is None:
@@ -263,9 +255,8 @@ def _classify_clips(
     bin_folder,
     imported_clips: list,
 ) -> list[_ClipGroup]:
-    group_order: list[tuple[str, bool]] = []
-    grouped_clips: dict[tuple[str, bool], list[object]] = {}
-    destination_bins: dict[tuple[str, bool], object] = {}
+    # dict preserves insertion order (Python 3.7+); keys are (resolution, is_multi_audio)
+    groups: dict[tuple[str, bool], tuple[list[object], object]] = {}
 
     for clip in imported_clips:
         if clip.GetClipProperty("Type") == "Still":
@@ -288,21 +279,17 @@ def _classify_clips(
 
         is_multi_audio = audio_tracks > 4
         key = (resolution, is_multi_audio)
-        dest_bin = (
-            _get_or_create_subfolder(media_pool, res_bin, "MultiAudio_5+")
-            if is_multi_audio
-            else res_bin
-        )
-        if key not in grouped_clips:
-            group_order.append(key)
-        destination_bins.setdefault(key, dest_bin)
-        grouped_clips.setdefault(key, []).append(clip)
+        if key not in groups:
+            dest_bin = (
+                _get_or_create_subfolder(media_pool, res_bin, "MultiAudio_5+")
+                if is_multi_audio
+                else res_bin
+            )
+            groups[key] = ([], dest_bin)
+        groups[key][0].append(clip)
 
     clip_groups: list[_ClipGroup] = []
-    for resolution, is_multi_audio in group_order:
-        key = (resolution, is_multi_audio)
-        clips = grouped_clips[key]
-        dest_bin = destination_bins[key]
+    for (resolution, is_multi_audio), (clips, dest_bin) in groups.items():
         logger.debug(
             "Moving %d clip(s) into %r for resolution=%s multi_audio=%s",
             len(clips),
@@ -384,21 +371,7 @@ def execute_resolve_plan(
     context = _connect_to_resolve(plan.project_prefix)
     standard_preset, multi_audio_preset = _resolve_render_presets(plan.codec)
     logger.info(
-        (
-            "Executing Resolve plan mode=%s project_prefix=%s "
-            "footage_folders=%d codec=%s clean_image=%s"
-        ),
-        plan.mode_name,
-        plan.project_prefix,
-        len(plan.footage_folders),
-        plan.codec,
-        plan.clean_image,
-    )
-    logger.debug(
-        (
-            "Executing Resolve plan: mode=%s project_prefix=%s "
-            "footage_folders=%d codec=%s clean_image=%s"
-        ),
+        "Executing Resolve plan mode=%s project_prefix=%s footage_folders=%d codec=%s clean_image=%s",
         plan.mode_name,
         plan.project_prefix,
         len(plan.footage_folders),
@@ -471,7 +444,6 @@ def execute_resolve_plan(
 
     context.project_manager.SaveProject()
     logger.info("Saved Resolve project")
-    logger.debug("Saved Resolve project")
     should_start_render = confirm_render or (
         lambda: presenter.confirm("\nAll render jobs added. Start rendering now? (y/n)")
     )

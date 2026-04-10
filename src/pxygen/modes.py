@@ -22,7 +22,6 @@ from .organize import (
 )
 from .paths import format_path_parts, path_parts
 from .plan import build_resolve_execution_plan
-from .presenter import ConsolePresenter
 from .resolve import ProxyGeneratorError, execute_resolve_plan
 from .table_output import output_table
 
@@ -82,10 +81,6 @@ def _normalize_depth(root_depth: int, depth: int) -> _DepthSpec:
     return _DepthSpec(requested=depth, resolved=resolved)
 
 
-def _format_depth_value(spec: _DepthSpec) -> str:
-    return str(spec.requested)
-
-
 def _print_folder_options(options, in_depth: int, output: OutputFn) -> None:
     rows = [
         (index, option.label, option.item_count)
@@ -132,17 +127,20 @@ def _iter_child_directories(path: Path) -> list[Path]:
 
 def _collect_directories_at_depth(root: Path, target_depth: int) -> list[Path]:
     """Collect directories exactly at *target_depth* without descending below them."""
+    root_depth = len(path_parts(root))
     matches: list[Path] = []
-    stack = [root]
+    stack: list[tuple[Path, int]] = [(root, root_depth)]
     while stack:
-        current = stack.pop()
-        current_depth = len(path_parts(current))
+        current, current_depth = stack.pop()
         if current_depth == target_depth:
             matches.append(current)
             continue
         if current_depth > target_depth:
             continue
-        stack.extend(reversed(_iter_child_directories(current)))
+        stack.extend(
+            (child, current_depth + 1)
+            for child in reversed(_iter_child_directories(current))
+        )
     return matches
 
 
@@ -194,9 +192,8 @@ def process_json_mode(
         codec: Render codec selection (see
             :func:`~pxygen.resolve.process_files_in_resolve`).
     """
-    presenter = ConsolePresenter(output_func=output, input_func=input_func)
-    input_func = presenter.read_line
-    output = presenter.show
+    output = output or print
+    input_func = input_func or input
     logger.info(
         "Running JSON mode json_path=%s proxy_path=%s dataset=%d in_depth=%d out_depth=%d",
         json_path,
@@ -248,8 +245,8 @@ def process_json_mode(
     summary_rows: list[tuple[object, ...]] = [
         ("JSON file", json_path),
         ("Dataset", f"group{dataset}"),
-        ("Input depth", _format_depth_value(in_depth_spec)),
-        ("Output depth", _format_depth_value(out_depth_spec)),
+        ("Input depth", str(in_depth_spec.requested)),
+        ("Output depth", str(out_depth_spec.requested)),
         ("File count", len(file_list)),
     ]
     if file_list:
@@ -290,17 +287,10 @@ def process_json_mode(
             logger.debug("JSON mode selected folder indices: %s", selected_indices)
             organized = select_folders_at_in_depth(organized, selected_indices)
     elif filter_mode == "filter" and filter_list:
+        organized_before_filter = organized
         organized = filter_folders_at_in_depth(organized, filter_list)
         if not organized:
-            available_names = sorted(
-                Path(key).name
-                for key in organize_json_mode_files(
-                    file_list,
-                    in_depth_spec.resolved,
-                    out_depth_spec.resolved,
-                )
-            )
-            available = ", ".join(available_names)
+            available = ", ".join(sorted(Path(k).name for k in organized_before_filter))
             logger.warning("No matching folders found for filter: %s", filter_list)
             logger.warning("Available folders: %s", available)
         else:
@@ -351,9 +341,8 @@ def process_directory_mode(
             filter_mode == ``'filter'``).
         codec: Render codec selection.
     """
-    presenter = ConsolePresenter(output_func=output, input_func=input_func)
-    input_func = presenter.read_line
-    output = presenter.show
+    output = output or print
+    input_func = input_func or input
     logger.info(
         "Running directory mode footage_path=%s proxy_path=%s in_depth=%d out_depth=%d",
         footage_path,
@@ -397,8 +386,8 @@ def process_directory_mode(
         [
             ("Footage", f"{footage_path} (depth: {footage_depth})"),
             ("Proxy output", proxy_path),
-            ("Input depth", _format_depth_value(in_depth_spec)),
-            ("Output depth", _format_depth_value(out_depth_spec)),
+            ("Input depth", str(in_depth_spec.requested)),
+            ("Output depth", str(out_depth_spec.requested)),
             ("Found folders", len(input_depth_folders)),
         ],
         output,
