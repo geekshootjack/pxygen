@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![English](https://img.shields.io/badge/docs-English-blue)](README.md)
 
-pxygen 将素材导入 DaVinci Resolve，按照文件夹层级自动建立媒体库 bin 结构，并批量排队代理渲染任务——一条命令完成全部操作。
+pxygen 将素材导入 DaVinci Resolve，按照文件夹层级自动建立媒体库 bin 结构，并批量排队转码任务——一条命令完成全部操作。
 
 ## 功能特性
 
