@@ -30,20 +30,15 @@ def path_parts(path: str | Path) -> list[str]:
         'C:\\Footage\\Day1' → ['C:', 'Footage', 'Day1']
     """
     path_str = str(path)
-    path_cls = PureWindowsPath if _looks_windows_path(path_str) else PurePosixPath
-    parts = path_cls(path_str).parts
+    p = PureWindowsPath(path_str) if _looks_windows_path(path_str) else PurePosixPath(path_str)
+    parts = p.parts
     if not parts:
         return []
-    result: list[str] = []
-    for i, part in enumerate(parts):
-        if i == 0:
-            if part == "/":
-                continue  # strip Unix root
-            # Normalise Windows drive root: 'C:\\' → 'C:'
-            result.append(part.rstrip("\\") if part.endswith("\\") else part)
-        else:
-            result.append(part)
-    return result
+    first = parts[0]
+    if first == "/":
+        return list(parts[1:])
+    # Normalise Windows drive root: 'C:\\' → 'C:'
+    return [first.rstrip("\\"), *parts[1:]]
 
 
 def _looks_windows_path(path_str: str) -> bool:
