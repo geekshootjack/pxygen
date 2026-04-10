@@ -71,14 +71,14 @@ export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
 ## 安装
 
 ```sh
-pip install git+https://github.com/thomjiji/DaVinci_Script_Proxy_Generator.git
+pip install git+https://github.com/thomjiji/pxygen.git
 ```
 
 或克隆后以可编辑模式安装：
 
 ```sh
-git clone https://github.com/thomjiji/DaVinci_Script_Proxy_Generator.git
-cd DaVinci_Script_Proxy_Generator
+git clone https://github.com/thomjiji/pxygen.git
+cd pxygen
 pip install -e .
 ```
 

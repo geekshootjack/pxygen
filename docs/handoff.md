@@ -1,7 +1,7 @@
 # Agent Handoff Document — pxygen
 
 **Date:** 2026-03-26
-**Repo:** `github.com/thomjiji/DaVinci_Script_Proxy_Generator`
+**Repo:** `github.com/thomjiji/pxygen`
 **Current version:** 1.5.2
 **Package name:** `pxygen`, primary entry point: `pxygen` (legacy alias: `proxy-generator`)
 
