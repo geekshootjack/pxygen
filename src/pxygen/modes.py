@@ -114,10 +114,17 @@ def _read_selection_indices(
     return parse_selection(choice, len(options))
 
 
+_EXCLUDED_DIR_NAMES: frozenset[str] = frozenset({"_gsdata_"})
+
+
 def _iter_child_directories(path: Path) -> list[Path]:
-    """Return child directories in deterministic order."""
+    """Return child directories in deterministic order, skipping system folders."""
     try:
-        children = (child for child in path.iterdir() if child.is_dir())
+        children = (
+            child
+            for child in path.iterdir()
+            if child.is_dir() and child.name not in _EXCLUDED_DIR_NAMES
+        )
         return sorted(children, key=lambda child: child.name)
     except OSError:
         return []
