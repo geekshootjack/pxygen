@@ -1,6 +1,6 @@
 """High-level entry points for the two operational modes.
 
-Both modes ultimately call :func:`~pxygen.resolve.process_files_in_resolve`.
+Both modes ultimately call :func:`~pxygen.resolve.execute_resolve_plan`.
 All DaVinci Resolve interaction is deferred to that function; everything here is
 pure Python orchestration.
 """
@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -22,12 +21,11 @@ from .organize import (
 )
 from .paths import format_path_parts, path_parts
 from .plan import build_resolve_execution_plan
+from .presenter import InputFn, OutputFn
 from .resolve import ProxyGeneratorError, execute_resolve_plan
 from .table_output import output_table
 
 logger = logging.getLogger(__name__)
-OutputFn = Callable[[str], None]
-InputFn = Callable[[], str]
 
 
 @dataclass(frozen=True)

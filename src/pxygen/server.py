@@ -132,6 +132,7 @@ def stream_job(job_id: str) -> StreamingResponse:
                 continue
             if item is None:
                 yield "event: done\ndata: \n\n"
+                JOBS.pop(job_id, None)
                 break
             elif item == _CONFIRM_SENTINEL:
                 yield "event: awaiting_confirm\ndata: \n\n"

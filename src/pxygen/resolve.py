@@ -1,6 +1,6 @@
 """DaVinci Resolve API interaction layer.
 
-``DaVinciResolveScript`` is imported *lazily* inside :func:`process_files_in_resolve`
+``DaVinciResolveScript`` is imported lazily inside :func:`_connect_to_resolve`
 so that every other module in this package can be imported and tested without a live
 Resolve instance.
 """
@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .plan import ResolveExecutionPlan, build_resolve_execution_plan
-from .presenter import ConsolePresenter
+from .presenter import ConsolePresenter, OutputFn
 from .table_output import output_table
 
 logger = logging.getLogger(__name__)
@@ -321,7 +321,7 @@ def _queue_render_jobs_for_bin(
     standard_preset: str,
     multi_audio_preset: str,
     counter,
-    output: Callable[[str], None],
+    output: OutputFn,
 ) -> None:
     if clip_groups:
         output_table(
@@ -362,7 +362,7 @@ def _queue_render_jobs_for_bin(
 def execute_resolve_plan(
     plan: ResolveExecutionPlan,
     *,
-    output: Callable[[str], None] | None = None,
+    output: OutputFn | None = None,
     confirm_render: Callable[[], bool] | None = None,
 ) -> None:
     """Execute a pre-built Resolve plan."""
@@ -456,26 +456,3 @@ def execute_resolve_plan(
         output("Project saved. Start rendering manually in DaVinci Resolve.")
 
 
-def process_files_in_resolve(
-    organized_files: dict[str, dict[str, list[str]]],
-    selected_footage_folders: list[str],
-    proxy_folder_path: str,
-    subfolder_depth: int,
-    *,
-    is_directory_mode: bool = False,
-    clean_image: bool = False,
-    codec: str = "auto",
-    output: Callable[[str], None] | None = None,
-    confirm_render: Callable[[], bool] | None = None,
-) -> None:
-    """Backward-compatible wrapper that builds and executes a Resolve plan."""
-    del subfolder_depth
-    plan = build_resolve_execution_plan(
-        organized_files,
-        selected_footage_folders,
-        proxy_folder_path,
-        mode_name="directory" if is_directory_mode else "json",
-        clean_image=clean_image,
-        codec=codec,
-    )
-    execute_resolve_plan(plan, output=output, confirm_render=confirm_render)

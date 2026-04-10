@@ -3,9 +3,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from .table_output import output_table
+from .table_output import OutputFn, output_table
 
-OutputFn = Callable[[str], None]
 InputFn = Callable[[], str]
 
 

@@ -7,7 +7,31 @@ import types
 from pathlib import PurePosixPath
 from unittest.mock import patch
 
-from pxygen.resolve import process_files_in_resolve
+from pxygen.plan import build_resolve_execution_plan
+from pxygen.resolve import execute_resolve_plan
+
+
+def _process(
+    organized_files,
+    selected_footage_folders,
+    proxy_folder_path,
+    _subfolder_depth=None,
+    *,
+    is_directory_mode=False,
+    clean_image=False,
+    codec="auto",
+    output=None,
+    confirm_render=None,
+):
+    plan = build_resolve_execution_plan(
+        organized_files,
+        selected_footage_folders,
+        proxy_folder_path,
+        mode_name="directory" if is_directory_mode else "json",
+        clean_image=clean_image,
+        codec=codec,
+    )
+    execute_resolve_plan(plan, output=output, confirm_render=confirm_render)
 
 
 class FakeClip:
@@ -212,7 +236,7 @@ class TestProcessFilesInResolve:
         project_manager, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
         monkeypatch.setattr("builtins.input", lambda: "n")
-        process_files_in_resolve(
+        _process(
             {"/footage/Day1": {"CamA": items}},
             ["/footage/Day1"],
             "/proxy",
@@ -263,7 +287,7 @@ class TestProcessFilesInResolve:
         media_storage = sys.modules["DaVinciResolveScript"].scriptapp("Resolve").GetMediaStorage()
 
         monkeypatch.setattr("builtins.input", lambda: "n")
-        process_files_in_resolve(
+        _process(
             {"/footage/Day1": {"CamA": items}},
             ["/footage/Day1"],
             "/proxy",
@@ -302,7 +326,7 @@ class TestProcessFilesInResolve:
         media_storage = sys.modules["DaVinciResolveScript"].scriptapp("Resolve").GetMediaStorage()
 
         monkeypatch.setattr("builtins.input", lambda: "n")
-        process_files_in_resolve(
+        _process(
             {"/footage/Day1": {"CamA": [str(source_dir)]}},
             ["/footage/Day1"],
             "/proxy",
@@ -322,7 +346,7 @@ class TestProcessFilesInResolve:
         project_manager, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
         monkeypatch.setattr("builtins.input", lambda: "y")
-        process_files_in_resolve(
+        _process(
             {"/footage/Day1": {"": items}},
             ["/footage/Day1"],
             "/proxy",
@@ -351,7 +375,7 @@ class TestProcessFilesInResolve:
         _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
         monkeypatch.setattr("builtins.input", lambda: "n")
-        process_files_in_resolve(
+        _process(
             {"/footage/Day1": {"CamA": items}},
             ["/footage/Day1"],
             "/proxy",
@@ -386,7 +410,7 @@ class TestProcessFilesInResolve:
         _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
         monkeypatch.setattr("builtins.input", lambda: "n")
-        process_files_in_resolve(
+        _process(
             {"/footage/Day1": {"CamA": items}},
             ["/footage/Day1"],
             "/proxy",
@@ -415,7 +439,7 @@ class TestProcessFilesInResolve:
         _, project, _ = _install_fake_resolve(monkeypatch, imports)
         output_lines: list[str] = []
 
-        process_files_in_resolve(
+        _process(
             {"/footage/Day1": {"CamA": items}},
             ["/footage/Day1"],
             "/proxy",
@@ -450,7 +474,7 @@ class TestProcessFilesInResolve:
         _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
         monkeypatch.setattr("builtins.input", lambda: "n")
-        process_files_in_resolve(
+        _process(
             {"/footage/Day1": {"CamA": items}},
             ["/footage/Day1"],
             "/proxy",
@@ -496,7 +520,7 @@ class TestProcessFilesInResolve:
 
         monkeypatch.setattr("builtins.input", lambda: "n")
         with caplog.at_level(logging.WARNING):
-            process_files_in_resolve(
+            _process(
                 {"/footage/Day1": {"CamA": items}},
                 ["/footage/Day1"],
                 "/proxy",
@@ -516,7 +540,7 @@ class TestProcessFilesInResolve:
         _install_fake_resolve(monkeypatch, imports)
 
         with patch("builtins.print") as mock_print:
-            process_files_in_resolve(
+            _process(
                 {"/footage/Day1": {"CamA": items}},
                 ["/footage/Day1"],
                 "/proxy",
