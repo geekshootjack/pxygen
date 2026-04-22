@@ -29,6 +29,19 @@ Common types: `feat`, `fix`, `chore`, `refactor`, `test`, `docs`
 
 ## Releases
 
-- Use semantic versioning: `vX.Y.Z`
-- Tag each release: `git tag vX.Y.Z && git push origin vX.Y.Z`
-- Update the version constant in the script before tagging
+Version is derived automatically from git tags via `hatch-vcs` — there is no version string to edit in code.
+
+**Semver rules:**
+- `PATCH` (x.x.N) — bug fixes, internal cleanup, no behaviour change
+- `MINOR` (x.N.0) — new feature or behaviour, backwards compatible
+- `MAJOR` (N.0.0) — breaking change: CLI flags removed/renamed, output format changed, etc.
+
+**When to tag:** when the accumulated commits since the last tag are ready for users — not every commit, not every PR. A meaningful feature or important fix is a good trigger.
+
+**How to release:**
+```sh
+git tag v2.1.0
+git push origin v2.1.0
+```
+
+That's it — no file edits needed. The version is read from the tag at build/install time.
