@@ -130,10 +130,10 @@ def _resolve_render_presets(codec: str) -> tuple[str, str]:
     """Return the standard and multi-audio render preset names."""
     codec_key = codec.lower()
     if codec_key in ("h265", "hevc", "265"):
-        return "FHD_h.265_420_8bit_5Mbps", "FHD_h.265_420_8bit_5Mbps"
+        return "fhd-h265-5mbps", "fhd-h265-5mbps"
     if codec_key == "prores":
-        return "FHD_prores_proxy", "FHD_prores_proxy"
-    return "FHD_h.265_420_8bit_5Mbps", "FHD_prores_proxy"
+        return "fhd-prores-proxy", "fhd-prores-proxy"
+    return "fhd-h265-5mbps", "fhd-prores-proxy"
 
 
 def _get_or_create_subfolder(media_pool, parent, name: str):

@@ -249,8 +249,8 @@ class TestProcessFilesInResolve:
         assert project.started_rendering is False
         assert project.loaded_burn_in_presets == ["burn-in"]
         assert project.loaded_render_presets == [
-            "FHD_h.265_420_8bit_5Mbps",
-            "FHD_prores_proxy",
+            "fhd-h265-5mbps",
+            "fhd-prores-proxy",
         ]
         assert project.render_job_count == 2
         assert [timeline.name for timeline in media_pool.timelines] == [
@@ -359,7 +359,7 @@ class TestProcessFilesInResolve:
         assert project_manager.saved is True
         assert project.started_rendering is True
         assert project.loaded_burn_in_presets == []
-        assert project.loaded_render_presets == ["FHD_prores_proxy"]
+        assert project.loaded_render_presets == ["fhd-prores-proxy"]
         assert project.render_job_count == 1
         assert [timeline.name for timeline in media_pool.timelines] == ["0001-1920x1080"]
         assert media_pool.timelines[0].settings["timelineResolutionWidth"] == "1920"
@@ -386,8 +386,8 @@ class TestProcessFilesInResolve:
 
         assert project.render_job_count == 2
         assert project.loaded_render_presets == [
-            "FHD_h.265_420_8bit_5Mbps",
-            "FHD_h.265_420_8bit_5Mbps",
+            "fhd-h265-5mbps",
+            "fhd-h265-5mbps",
         ]
         assert [timeline.name for timeline in media_pool.timelines] == [
             "0001-4096x2160",
