@@ -95,8 +95,8 @@ Select folders to process (numbers, range like 2-4, or 'all'):
 | Value | Preset used |
 |-------|-------------|
 | `auto` | H.265 for ≤ 4 audio channels; ProRes Proxy for > 4 |
-| `h265` / `hevc` / `265` | `FHD_h.265_420_8bit_5Mbps` |
-| `prores` | `FHD_prores_proxy` |
+| `h265` / `hevc` / `265` | `fhd-h265-5mbps.xml` |
+| `prores` | `fhd-prores-proxy.xml` |
 
 The `auto` default exists because Adobe Premiere cannot hardware-decode 4:2:0 8-bit H.265 files with more than 4 audio tracks (Sony XAVC-I). ProRes avoids this issue.
 
@@ -131,8 +131,8 @@ Preset files are included in the `presets/` directory:
 
 | Preset name | File | Used for |
 |-------------|------|----------|
-| `FHD_h.265_420_8bit_5Mbps` | `presets/FHD_h.265_420_8bit_5Mbps.xml` | Standard proxy render |
-| `FHD_prores_proxy` | `presets/FHD_prores_proxy.xml` | Multi-audio proxy render |
+| `fhd-h265-5mbps.xml` | `presets/fhd-h265-5mbps.xml.xml` | Standard proxy render |
+| `fhd-prores-proxy.xml` | `presets/fhd-prores-proxy.xml.xml` | Multi-audio proxy render |
 | `burn-in` | `presets/burn-in.xml` | Timecode + clip name overlay |
 
 To import: **DaVinci Resolve → Deliver → Render Settings → ⋯ → Import Preset**.
