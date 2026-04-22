@@ -20,15 +20,17 @@ pxygen imports your footage into DaVinci Resolve, organises it into bins that mi
 
 - Python ≥ 3.9, **64-bit**
 - DaVinci Resolve ≥ 19.1.4 (must be running)
-- Resolve render presets: `FHD_h.265_420_8bit_5Mbps`, `FHD_prores_proxy`
+- Resolve render presets: `fhd-h265-5mbps`, `fhd-prores-proxy`
 - Resolve burn-in preset: `burn-in`
 
 ## Environment Setup
 
-DaVinci Resolve exposes its scripting API through environment variables. Set these before running pxygen:
+For standard Resolve installs, pxygen detects the scripting environment automatically — no manual setup needed.
+
+If auto-detection fails (non-standard install path), set these variables manually before running pxygen:
 
 <details>
-<summary>macOS (standard install)</summary>
+<summary>macOS (standard install) — bash/zsh</summary>
 
 ```sh
 export RESOLVE_SCRIPT_API="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting"
@@ -38,7 +40,7 @@ export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
 </details>
 
 <details>
-<summary>macOS (App Store install)</summary>
+<summary>macOS (App Store install) — bash/zsh</summary>
 
 ```sh
 export RESOLVE_SCRIPT_API="/Applications/DaVinci Resolve Studio.app/Contents/Resources/Developer/Scripting"
@@ -48,7 +50,18 @@ export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
 </details>
 
 <details>
-<summary>Windows</summary>
+<summary>Windows — PowerShell</summary>
+
+```powershell
+$env:RESOLVE_SCRIPT_API = "$env:PROGRAMDATA\Blackmagic Design\DaVinci Resolve\Support\Developer\Scripting"
+$env:RESOLVE_SCRIPT_LIB = "C:\Program Files\Blackmagic Design\DaVinci Resolve\fusionscript.dll"
+$env:PYTHONPATH = "$env:PYTHONPATH;$env:RESOLVE_SCRIPT_API\Modules\"
+$env:PATH = "$env:PATH;C:\Program Files\Blackmagic Design\DaVinci Resolve"
+```
+</details>
+
+<details>
+<summary>Windows — Command Prompt</summary>
 
 ```bat
 set RESOLVE_SCRIPT_API=%PROGRAMDATA%\Blackmagic Design\DaVinci Resolve\Support\Developer\Scripting
@@ -59,12 +72,22 @@ set PATH=%PATH%;C:\Program Files\Blackmagic Design\DaVinci Resolve
 </details>
 
 <details>
-<summary>Linux</summary>
+<summary>Linux — bash/zsh</summary>
 
 ```sh
 export RESOLVE_SCRIPT_API="/opt/resolve/Developer/Scripting"
 export RESOLVE_SCRIPT_LIB="/opt/resolve/libs/Fusion/fusionscript.so"
 export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
+```
+</details>
+
+<details>
+<summary>Linux — fish</summary>
+
+```fish
+set -x RESOLVE_SCRIPT_API "/opt/resolve/Developer/Scripting"
+set -x RESOLVE_SCRIPT_LIB "/opt/resolve/libs/Fusion/fusionscript.so"
+set -x PYTHONPATH "$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
 ```
 </details>
 

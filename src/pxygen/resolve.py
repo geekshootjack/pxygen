@@ -97,8 +97,67 @@ def _normalize_resolution(resolution: str | None) -> str | None:
     return f"{width}x{height}"
 
 
+def _setup_resolve_env() -> None:
+    """Auto-detect the DaVinci Resolve scripting environment if not already configured.
+
+    Probes well-known install locations per platform and injects the Modules
+    directory into sys.path so that ``import DaVinciResolveScript`` works
+    without the user having to set any environment variables manually.
+    Skips detection when RESOLVE_SCRIPT_API is already set.
+    """
+    if os.environ.get("RESOLVE_SCRIPT_API"):
+        modules_dir = Path(os.environ["RESOLVE_SCRIPT_API"]) / "Modules"
+        if str(modules_dir) not in sys.path:
+            sys.path.insert(0, str(modules_dir))
+        return
+
+    if sys.platform == "darwin":
+        candidates = [
+            (
+                Path("/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting"),
+                Path("/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Libraries/Fusion/fusionscript.so"),
+            ),
+            (
+                Path("/Applications/DaVinci Resolve Studio.app/Contents/Resources/Developer/Scripting"),
+                Path("/Applications/DaVinci Resolve Studio.app/Contents/Libraries/Fusion/fusionscript.so"),
+            ),
+        ]
+    elif sys.platform == "win32":
+        programdata = Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData"))
+        candidates = [
+            (
+                programdata / "Blackmagic Design" / "DaVinci Resolve" / "Support" / "Developer" / "Scripting",
+                Path(r"C:\Program Files\Blackmagic Design\DaVinci Resolve\fusionscript.dll"),
+            ),
+        ]
+    else:
+        candidates = [
+            (
+                Path("/opt/resolve/Developer/Scripting"),
+                Path("/opt/resolve/libs/Fusion/fusionscript.so"),
+            ),
+        ]
+
+    for api_path, lib_path in candidates:
+        modules_dir = api_path / "Modules"
+        if modules_dir.exists():
+            os.environ["RESOLVE_SCRIPT_API"] = str(api_path)
+            os.environ["RESOLVE_SCRIPT_LIB"] = str(lib_path)
+            sys.path.insert(0, str(modules_dir))
+            logger.debug("Auto-configured Resolve scripting env from %s", api_path)
+            return
+
+    raise ProxyGeneratorError(
+        "Could not find DaVinci Resolve scripting modules. "
+        "Set RESOLVE_SCRIPT_API and RESOLVE_SCRIPT_LIB manually — "
+        "see the Environment Setup section in README.md."
+    )
+
+
 def _connect_to_resolve(project_prefix: str) -> _ResolveContext:
     """Connect to Resolve and create a fresh proxy project."""
+    _setup_resolve_env()
+
     # Python 3.8+ on Windows calls SetDefaultDllDirectories() at startup,
     # which disables PATH for DLL resolution. os.add_dll_directory() is the
     # documented replacement API — needed so fusionscript.dll can find its
