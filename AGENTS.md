@@ -6,15 +6,6 @@ This file provides guidance to Codex, Claude Code and other agents when working 
 
 Python script that automates footage import and proxy generation in DaVinci Resolve. The project is under active refactoring — avoid cementing implementation details; prefer configurable/extensible patterns.
 
-## Requirements
-
-- Python 3 >=3.6, **64-bit only** (DaVinci Resolve scripting API requires 64-bit Python)
-- DaVinci Resolve >=19.1.4 must be running before executing the script
-- Required environment variables (platform-specific paths — see README):
-  - `RESOLVE_SCRIPT_API`
-  - `RESOLVE_SCRIPT_LIB`
-  - `PYTHONPATH`
-
 ## Commit Style
 
 Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): description`
