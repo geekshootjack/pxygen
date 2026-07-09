@@ -6,15 +6,33 @@ from __future__ import annotations
 
 import logging
 import sys
+from pathlib import Path
 
 from . import __version__
-from .logging_utils import configure_logging
 from .modes import process_directory_mode, process_json_mode
 from .paths import clean_path_input, is_json_file
 from .presenter import ConsolePresenter
 from .resolve import ProxyGeneratorError
 
 logger = logging.getLogger(__name__)
+
+
+def configure_logging(log_level: str = "warning", log_file: str | None = None) -> None:
+    """Configure application logging with a standard detailed format."""
+    level = getattr(logging, log_level.upper())
+    handlers: list[logging.Handler] = [logging.StreamHandler()]
+    if log_file:
+        log_path = Path(log_file)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        handlers.append(logging.FileHandler(log_path, encoding="utf-8"))
+
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=handlers,
+        force=True,
+    )
 
 
 def _build_parser():

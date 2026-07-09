@@ -6,8 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from pxygen.cli import _build_parser, main
-from pxygen.logging_utils import configure_logging
+from pxygen.cli import _build_parser, configure_logging, main
 
 # ---------------------------------------------------------------------------
 # _build_parser — flag parsing
@@ -90,7 +89,7 @@ class TestParser:
 
 class TestLoggingConfig:
     def test_configure_logging_uses_standard_structured_format(self):
-        with patch("pxygen.logging_utils.logging.basicConfig") as mock_basic_config:
+        with patch("pxygen.cli.logging.basicConfig") as mock_basic_config:
             configure_logging("debug")
 
         kwargs = mock_basic_config.call_args.kwargs
@@ -104,7 +103,7 @@ class TestLoggingConfig:
 
     def test_configure_logging_adds_file_handler_when_requested(self, tmp_path):
         log_path = tmp_path / "logs" / "run.log"
-        with patch("pxygen.logging_utils.logging.basicConfig") as mock_basic_config:
+        with patch("pxygen.cli.logging.basicConfig") as mock_basic_config:
             configure_logging("info", str(log_path))
 
         kwargs = mock_basic_config.call_args.kwargs
