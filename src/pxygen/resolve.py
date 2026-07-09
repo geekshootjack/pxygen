@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from .plan import ResolveExecutionPlan, build_resolve_execution_plan
+from .plan import ResolveExecutionPlan
 from .presenter import ConsolePresenter, OutputFn
 from .table_output import output_table
 
@@ -114,19 +114,24 @@ def _setup_resolve_env() -> None:
     if sys.platform == "darwin":
         candidates = [
             (
-                Path("/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting"),
-                Path("/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Libraries/Fusion/fusionscript.so"),
+                Path("/Library/Application Support/Blackmagic Design/DaVinci Resolve")
+                / "Developer/Scripting",
+                Path("/Applications/DaVinci Resolve/DaVinci Resolve.app")
+                / "Contents/Libraries/Fusion/fusionscript.so",
             ),
             (
-                Path("/Applications/DaVinci Resolve Studio.app/Contents/Resources/Developer/Scripting"),
-                Path("/Applications/DaVinci Resolve Studio.app/Contents/Libraries/Fusion/fusionscript.so"),
+                Path("/Applications/DaVinci Resolve Studio.app")
+                / "Contents/Resources/Developer/Scripting",
+                Path("/Applications/DaVinci Resolve Studio.app")
+                / "Contents/Libraries/Fusion/fusionscript.so",
             ),
         ]
     elif sys.platform == "win32":
         programdata = Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData"))
         candidates = [
             (
-                programdata / "Blackmagic Design" / "DaVinci Resolve" / "Support" / "Developer" / "Scripting",
+                programdata / "Blackmagic Design" / "DaVinci Resolve"
+                / "Support" / "Developer" / "Scripting",
                 Path(r"C:\Program Files\Blackmagic Design\DaVinci Resolve\fusionscript.dll"),
             ),
         ]
@@ -430,7 +435,8 @@ def execute_resolve_plan(
     context = _connect_to_resolve(plan.project_prefix)
     standard_preset, multi_audio_preset = _resolve_render_presets(plan.codec)
     logger.info(
-        "Executing Resolve plan mode=%s project_prefix=%s footage_folders=%d codec=%s clean_image=%s",
+        "Executing Resolve plan mode=%s project_prefix=%s footage_folders=%d"
+        " codec=%s clean_image=%s",
         plan.mode_name,
         plan.project_prefix,
         len(plan.footage_folders),
