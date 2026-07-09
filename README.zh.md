@@ -2,7 +2,7 @@
 
 **DaVinci Resolve 自动化代理生成工具。**
 
-[![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![English](https://img.shields.io/badge/docs-English-blue)](README.md)
 
@@ -18,7 +18,7 @@ pxygen 将素材导入 DaVinci Resolve，按照文件夹层级自动建立媒体
 
 ## 环境要求
 
-- Python ≥ 3.9，**必须是 64 位**
+- Python ≥ 3.10，**必须是 64 位**官方 python.org 版本（Resolve 脚本接口不兼容 uv 托管的 Python）
 - DaVinci Resolve ≥ 19.1.4（运行脚本前需保持 Resolve 开启）
 - Resolve 渲染预设：`FHD_h.265_420_8bit_5Mbps`、`FHD_prores_proxy`
 - Resolve 数据烧录预设：`burn-in`
@@ -70,16 +70,33 @@ export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
 
 ## 安装
 
+推荐使用 [uv](https://docs.astral.sh/uv/) 以工具方式安装：
+
 ```sh
-pip install git+https://github.com/thomjiji/pxygen.git
+uv tool install git+https://github.com/geekshootjack/pxygen          # 最新 main
+uv tool install git+https://github.com/geekshootjack/pxygen@v2.0.0   # 锁定发布版本
+uv tool upgrade pxygen                                               # 跟随已安装的 ref 更新
 ```
 
-或克隆后以可编辑模式安装：
+切换到其他版本时 `uv tool upgrade` 不会改变 ref，需强制重装：
 
 ```sh
-git clone https://github.com/thomjiji/pxygen.git
+uv tool install --force git+https://github.com/geekshootjack/pxygen@v2.1.0
+```
+
+或者免安装单次运行：
+
+```sh
+uvx --from git+https://github.com/geekshootjack/pxygen pxygen -i ... -o ...
+```
+
+开发环境：
+
+```sh
+git clone https://github.com/geekshootjack/pxygen.git
 cd pxygen
-pip install -e .
+uv sync --all-groups
+uv run pxygen --help
 ```
 
 ## 快速上手
