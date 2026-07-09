@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 import sys
 import types
-from pathlib import PurePosixPath
+from pathlib import Path
 from unittest.mock import patch
 
 from pxygen.plan import build_resolve_execution_plan
@@ -394,7 +394,7 @@ class TestProcessFilesInResolve:
             "0002-1920x1080",
         ]
         assert all(
-            settings["TargetDir"] == PurePosixPath("/proxy", "Day1", "CamA").as_posix()
+            settings["TargetDir"] == str(Path("/proxy", "Day1", "CamA"))
             for settings in project.render_settings
         )
 
