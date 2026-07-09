@@ -5,7 +5,8 @@ from collections.abc import Callable
 
 from .table_output import OutputFn, output_table
 
-InputFn = Callable[[], str]
+# Receives the prompt string to display inline (like builtins.input)
+InputFn = Callable[[str], str]
 
 
 class ConsolePresenter:
@@ -31,8 +32,8 @@ class ConsolePresenter:
     ) -> None:
         output_table(title, headers, rows, self.show)
 
-    def read_line(self) -> str:
-        return self._input()
+    def read_line(self, prompt: str = "> ") -> str:
+        return self._input(prompt)
 
     def confirm(self, prompt: str) -> bool:
         self.show(prompt)

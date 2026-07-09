@@ -1,4 +1,4 @@
-"""Shared terminal table rendering helpers."""
+"""Shared terminal rendering helpers (tables and stage rules)."""
 from __future__ import annotations
 
 import io
@@ -6,10 +6,34 @@ import shutil
 from collections.abc import Callable
 
 from rich import box
-from rich.console import Console
+from rich.console import Console, RenderableType
+from rich.rule import Rule
 from rich.table import Table
 
 OutputFn = Callable[[str], None]
+
+
+def _output_renderable(renderable: RenderableType, output: OutputFn) -> None:
+    """Render a rich renderable to plain text through the output callback."""
+    terminal_width = max(shutil.get_terminal_size(fallback=(160, 20)).columns, 120)
+    buffer = io.StringIO()
+    console = Console(
+        file=buffer,
+        width=terminal_width,
+        color_system=None,
+        force_terminal=False,
+        soft_wrap=False,
+        legacy_windows=False,
+    )
+    console.print(renderable)
+    for line in buffer.getvalue().splitlines():
+        output(line)
+
+
+def output_rule(title: str, output: OutputFn) -> None:
+    """Render a titled horizontal rule marking a new interaction stage."""
+    output("")
+    _output_renderable(Rule(title, characters="─", style=""), output)
 
 
 def output_table(
@@ -36,16 +60,4 @@ def output_table(
     for row in rows:
         table.add_row(*(str(cell).replace("\n", " ") for cell in row))
 
-    terminal_width = max(shutil.get_terminal_size(fallback=(160, 20)).columns, 120)
-    buffer = io.StringIO()
-    console = Console(
-        file=buffer,
-        width=terminal_width,
-        color_system=None,
-        force_terminal=False,
-        soft_wrap=False,
-        legacy_windows=False,
-    )
-    console.print(table)
-    for line in buffer.getvalue().splitlines():
-        output(line)
+    _output_renderable(table, output)

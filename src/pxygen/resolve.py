@@ -18,7 +18,7 @@ from pathlib import Path
 
 from .plan import ResolveExecutionPlan
 from .presenter import ConsolePresenter, OutputFn
-from .table_output import output_table
+from .table_output import output_rule, output_table
 
 logger = logging.getLogger(__name__)
 
@@ -453,7 +453,7 @@ def execute_resolve_plan(
     counter = itertools.count(1)
 
     for footage_folder in plan.footage_folders:
-        output(f"\nProcessing footage folder: {footage_folder.footage_folder_name}")
+        output_rule(f"Processing: {footage_folder.footage_folder_name}", output)
         logger.info("Processing footage folder %s", footage_folder.footage_folder_name)
         main_bin = context.media_pool.AddSubFolder(
             context.root_folder, footage_folder.footage_folder_name

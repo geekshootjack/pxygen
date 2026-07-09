@@ -235,7 +235,7 @@ class TestProcessFilesInResolve:
         }
         project_manager, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
-        monkeypatch.setattr("builtins.input", lambda: "n")
+        monkeypatch.setattr("builtins.input", lambda *_: "n")
         _process(
             {"/footage/Day1": {"CamA": items}},
             ["/footage/Day1"],
@@ -286,7 +286,7 @@ class TestProcessFilesInResolve:
         project_manager, project, media_pool = _install_fake_resolve(monkeypatch, imports)
         media_storage = sys.modules["DaVinciResolveScript"].scriptapp("Resolve").GetMediaStorage()
 
-        monkeypatch.setattr("builtins.input", lambda: "n")
+        monkeypatch.setattr("builtins.input", lambda *_: "n")
         _process(
             {"/footage/Day1": {"CamA": items}},
             ["/footage/Day1"],
@@ -325,7 +325,7 @@ class TestProcessFilesInResolve:
         project_manager, project, media_pool = _install_fake_resolve(monkeypatch, imports)
         media_storage = sys.modules["DaVinciResolveScript"].scriptapp("Resolve").GetMediaStorage()
 
-        monkeypatch.setattr("builtins.input", lambda: "n")
+        monkeypatch.setattr("builtins.input", lambda *_: "n")
         _process(
             {"/footage/Day1": {"CamA": [str(source_dir)]}},
             ["/footage/Day1"],
@@ -345,7 +345,7 @@ class TestProcessFilesInResolve:
         imports = {tuple(items): [FakeClip("1920x1080", "2")]}
         project_manager, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
-        monkeypatch.setattr("builtins.input", lambda: "y")
+        monkeypatch.setattr("builtins.input", lambda *_: "y")
         _process(
             {"/footage/Day1": {"": items}},
             ["/footage/Day1"],
@@ -374,7 +374,7 @@ class TestProcessFilesInResolve:
         }
         _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
-        monkeypatch.setattr("builtins.input", lambda: "n")
+        monkeypatch.setattr("builtins.input", lambda *_: "n")
         _process(
             {"/footage/Day1": {"CamA": items}},
             ["/footage/Day1"],
@@ -409,7 +409,7 @@ class TestProcessFilesInResolve:
         }
         _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
-        monkeypatch.setattr("builtins.input", lambda: "n")
+        monkeypatch.setattr("builtins.input", lambda *_: "n")
         _process(
             {"/footage/Day1": {"CamA": items}},
             ["/footage/Day1"],
@@ -479,7 +479,7 @@ class TestProcessFilesInResolve:
         }
         _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
-        monkeypatch.setattr("builtins.input", lambda: "n")
+        monkeypatch.setattr("builtins.input", lambda *_: "n")
         _process(
             {"/footage/Day1": {"CamA": items}},
             ["/footage/Day1"],
@@ -524,7 +524,7 @@ class TestProcessFilesInResolve:
         }
         _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
-        monkeypatch.setattr("builtins.input", lambda: "n")
+        monkeypatch.setattr("builtins.input", lambda *_: "n")
         with caplog.at_level(logging.WARNING):
             _process(
                 {"/footage/Day1": {"CamA": items}},

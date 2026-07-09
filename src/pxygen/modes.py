@@ -24,7 +24,7 @@ from .paths import format_path_parts, path_parts
 from .plan import build_resolve_execution_plan
 from .presenter import InputFn, OutputFn
 from .resolve import ProxyGeneratorError, execute_resolve_plan
-from .table_output import output_table
+from .table_output import output_rule, output_table
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +81,7 @@ def _normalize_depth(root_depth: int, depth: int) -> _DepthSpec:
 
 
 def _print_folder_options(options, in_depth: int, output: OutputFn) -> None:
+    output_rule("Select folders", output)
     rows = [
         (index, option.label, option.item_count)
         for index, option in enumerate(options, 1)
@@ -91,7 +92,7 @@ def _print_folder_options(options, in_depth: int, output: OutputFn) -> None:
         rows,
         output,
     )
-    output("\nSelect folders to process (numbers like '1 3 8', range like 2-4, or 'all'):")
+    output("\nNumbers like '1 3 8', range like 2-4, or 'all'")
 
 
 def _read_selection_indices(
@@ -102,7 +103,7 @@ def _read_selection_indices(
     output: OutputFn,
 ) -> list[int] | None:
     _print_folder_options(options, in_depth, output)
-    choice = input_func().strip()
+    choice = input_func("> ").strip()
     if choice.lower() == "all":
         return None
     return parse_selection(choice, len(options))
@@ -432,6 +433,7 @@ def process_directory_mode(
     # --- Selection / filtering at the input-depth level ---
     if filter_mode == "select":
         folder_paths = sorted(targets_by_input)
+        output_rule("Select folders", output)
         output_table(
             f"Folders at depth {in_depth}:",
             ("#", "Folder"),
@@ -441,8 +443,8 @@ def process_directory_mode(
             ],
             output,
         )
-        output("\nSelect folders to process (numbers like '1 3 8', range like 2-4, or 'all'):")
-        choice = input_func().strip()
+        output("\nNumbers like '1 3 8', range like 2-4, or 'all'")
+        choice = input_func("> ").strip()
         if choice.lower() == "all":
             selected_indices = None
         else:
