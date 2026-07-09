@@ -215,21 +215,6 @@ class TestDispatch:
             _, kwargs = mock_dir.call_args
             assert kwargs["clean_image"] is True
 
-    def test_legacy_positional_directory(self, tmp_path):
-        footage = tmp_path / "footage"
-        footage.mkdir()
-        with patch(_MOCK_DIR) as mock_dir, patch(_MOCK_JSON) as mock_json:
-            self._run([str(footage), "/proxy"])
-            mock_dir.assert_called_once()
-            mock_json.assert_not_called()
-
-    def test_legacy_positional_json(self):
-        json_path = "/nonexistent/comp.json"
-        with patch(_MOCK_DIR) as mock_dir, patch(_MOCK_JSON) as mock_json:
-            self._run([json_path, "/proxy"])
-            mock_json.assert_called_once()
-            mock_dir.assert_not_called()
-
     def test_attribute_error_logged(self, caplog):
         with patch("sys.argv", ["pxygen", "-i", "/tmp/a.json", "-o", "/proxy"]), patch(
             "pxygen.cli.configure_logging"

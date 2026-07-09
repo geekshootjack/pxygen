@@ -1,13 +1,13 @@
 """Command-line interface entry point.
 
 Parses arguments and dispatches to :mod:`pxygen.modes`.
-Supports both named flags and the legacy positional-argument syntax.
 """
 from __future__ import annotations
 
 import logging
 import sys
 
+from . import __version__
 from .logging_utils import configure_logging
 from .modes import process_directory_mode, process_json_mode
 from .paths import clean_path_input, is_json_file
@@ -31,7 +31,7 @@ def _build_parser():
     parser = argparse.ArgumentParser(
         prog="pxygen",
         description=(
-            "pxygen v1.5.2\n\n"
+            f"pxygen v{__version__}\n\n"
             "Pass a footage folder or a JSON comparison file to --input;\n"
             "the mode is detected automatically."
         ),
@@ -42,7 +42,6 @@ def _build_parser():
             "  pxygen -i comparison.json -o /Volumes/SSD/Proxy --group 2\n"
             "  pxygen -i /Volumes/SSD/Footage -o /Proxy --select\n"
             '  pxygen -i /Volumes/SSD/Footage -o /Proxy --filter "Day1,Day2"\n'
-            "\nLegacy alias still works: proxy-generator"
         ),
     )
 
@@ -95,9 +94,6 @@ def _build_parser():
         help="Optional file path for detailed runtime logs",
     )
 
-    # Legacy positional arguments kept for backward compatibility
-    parser.add_argument("args", nargs="*", help=argparse.SUPPRESS)
-
     return parser
 
 
@@ -123,49 +119,25 @@ def main() -> None:
     )
 
     try:
-        if args.input:
-            if not args.output:
-                parser.error("requires -o/--output")
-            input_path = clean_path_input(args.input)
-            output_path = clean_path_input(args.output)
-            if is_json_file(input_path):
-                process_json_mode(
-                    input_path, output_path,
-                    args.group, args.in_depth, args.out_depth,
-                    **shared,
-                )
-            else:
-                process_directory_mode(
-                    input_path, output_path,
-                    args.in_depth, args.out_depth,
-                    **shared,
-                )
-
-        elif len(args.args) >= 2:
-            # Legacy positional: <footage_or_json> <proxy>
-            first = clean_path_input(args.args[0])
-            output_path = clean_path_input(args.args[1])
-            if is_json_file(first):
-                process_json_mode(
-                    first,
-                    output_path,
-                    args.group,
-                    args.in_depth,
-                    args.out_depth,
-                    **shared,
-                )
-            else:
-                process_directory_mode(
-                    first,
-                    output_path,
-                    args.in_depth,
-                    args.out_depth,
-                    **shared,
-                )
-
-        else:
+        if not args.input:
             parser.print_help()
             sys.exit(1)
+        if not args.output:
+            parser.error("requires -o/--output")
+        input_path = clean_path_input(args.input)
+        output_path = clean_path_input(args.output)
+        if is_json_file(input_path):
+            process_json_mode(
+                input_path, output_path,
+                args.group, args.in_depth, args.out_depth,
+                **shared,
+            )
+        else:
+            process_directory_mode(
+                input_path, output_path,
+                args.in_depth, args.out_depth,
+                **shared,
+            )
 
     except ProxyGeneratorError as exc:
         logger.error("%s", exc)

@@ -146,17 +146,3 @@ The project is saved automatically before rendering starts. If Resolve crashes m
 1. Reopen DaVinci Resolve.
 2. Open the `proxy_YYYYMMDD_HHMMSS` project that was created.
 3. Go to **Deliver** and restart the render queue.
-
----
-
-## Legacy Positional Arguments
-
-The original positional syntax is still supported for backward compatibility:
-
-```sh
-# Directory mode (positional)
-pxygen /path/to/footage /path/to/proxy
-
-# JSON mode (positional)
-pxygen comparison.json /path/to/proxy
-```
