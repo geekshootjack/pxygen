@@ -42,7 +42,9 @@ class FakeClip:
             "Type": clip_type,
         }
 
-    def GetClipProperty(self, name: str):
+    def GetClipProperty(self, name: str | None = None):
+        if name is None:
+            return dict(self._properties)
         return self._properties.get(name)
 
 

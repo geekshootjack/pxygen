@@ -197,12 +197,23 @@ def _resolve_render_presets(codec: str) -> tuple[str, str]:
     return "fhd-h265-5mbps", "fhd-prores-proxy"
 
 
-def _get_or_create_subfolder(media_pool, parent, name: str):
+# Cache of (id(parent), name) -> folder to avoid re-probing Resolve on every
+# lookup; each GetSubFolderList/GetName is a cross-process API round-trip.
+_BinCache = dict
+
+
+def _get_or_create_subfolder(media_pool, parent, name: str, cache: _BinCache):
+    key = (id(parent), name)
+    if key in cache:
+        return cache[key]
     for folder in parent.GetSubFolderList():
         if folder.GetName() == name:
+            cache[key] = folder
             return folder
     logger.debug("Creating subfolder %r under %r", name, parent.GetName())
-    return media_pool.AddSubFolder(parent, name)
+    folder = media_pool.AddSubFolder(parent, name)
+    cache[key] = folder
+    return folder
 
 
 def _build_timeline_name(index: int, resolution: str, *, is_multi_audio: bool) -> str:
@@ -213,10 +224,10 @@ def _build_timeline_name(index: int, resolution: str, *, is_multi_audio: bool) -
     return base_name
 
 
-def _build_bin_folder(media_pool, main_bin, bin_parts: tuple[str, ...]):
+def _build_bin_folder(media_pool, main_bin, bin_parts: tuple[str, ...], cache: _BinCache):
     bin_folder = main_bin
     for part in bin_parts:
-        bin_folder = _get_or_create_subfolder(media_pool, bin_folder, part)
+        bin_folder = _get_or_create_subfolder(media_pool, bin_folder, part, cache)
     return bin_folder
 
 
@@ -315,15 +326,20 @@ def _classify_clips(
     media_pool,
     bin_folder,
     imported_clips: list,
+    bin_cache: _BinCache,
 ) -> list[_ClipGroup]:
+    # First pass is pure classification: one GetClipProperty() round-trip per
+    # clip (the no-arg form returns all properties at once). Bin folders are
+    # resolved afterwards, once per group, instead of once per clip.
     # dict preserves insertion order (Python 3.7+); keys are (resolution, is_multi_audio)
-    groups: dict[tuple[str, bool], tuple[list[object], object, set[int]]] = {}
+    groups: dict[tuple[str, bool], tuple[list[object], set[int]]] = {}
 
     for clip in imported_clips:
-        if clip.GetClipProperty("Type") == "Still":
+        properties = clip.GetClipProperty() or {}
+        if properties.get("Type") == "Still":
             logger.debug("Skipping still image clip during Resolve classification")
             continue
-        raw_resolution = clip.GetClipProperty("Resolution")
+        raw_resolution = properties.get("Resolution")
         resolution = _normalize_resolution(raw_resolution)
         if resolution is None:
             logger.warning(
@@ -331,9 +347,8 @@ def _classify_clips(
                 raw_resolution,
             )
             continue
-        res_bin = _get_or_create_subfolder(media_pool, bin_folder, resolution)
         try:
-            audio_tracks = int(clip.GetClipProperty("Audio Ch") or 0)
+            audio_tracks = int(properties.get("Audio Ch") or 0)
         except (ValueError, TypeError):
             audio_tracks = 0
         logger.debug("Clip classified as resolution=%s audio_tracks=%d", resolution, audio_tracks)
@@ -341,17 +356,18 @@ def _classify_clips(
         is_multi_audio = audio_tracks > 4
         key = (resolution, is_multi_audio)
         if key not in groups:
-            dest_bin = (
-                _get_or_create_subfolder(media_pool, res_bin, "MultiAudio_5+")
-                if is_multi_audio
-                else res_bin
-            )
-            groups[key] = ([], dest_bin, set())
+            groups[key] = ([], set())
         groups[key][0].append(clip)
-        groups[key][2].add(audio_tracks)
+        groups[key][1].add(audio_tracks)
 
     clip_groups: list[_ClipGroup] = []
-    for (resolution, is_multi_audio), (clips, dest_bin, channels) in groups.items():
+    for (resolution, is_multi_audio), (clips, channels) in groups.items():
+        res_bin = _get_or_create_subfolder(media_pool, bin_folder, resolution, bin_cache)
+        dest_bin = (
+            _get_or_create_subfolder(media_pool, res_bin, "MultiAudio_5+", bin_cache)
+            if is_multi_audio
+            else res_bin
+        )
         logger.debug(
             "Moving %d clip(s) into %r for resolution=%s multi_audio=%s",
             len(clips),
@@ -451,6 +467,7 @@ def execute_resolve_plan(
         logger.debug("Loaded burn-in preset")
 
     counter = itertools.count(1)
+    bin_cache: _BinCache = {}
 
     for footage_folder in plan.footage_folders:
         output_rule(f"Processing: {footage_folder.footage_folder_name}", output)
@@ -460,7 +477,9 @@ def execute_resolve_plan(
         )
 
         for batch in footage_folder.batches:
-            bin_folder = _build_bin_folder(context.media_pool, main_bin, batch.bin_parts)
+            bin_folder = _build_bin_folder(
+                context.media_pool, main_bin, batch.bin_parts, bin_cache
+            )
             try:
                 items_to_import = _filter_import_items(batch.items)
                 if not items_to_import:
@@ -470,6 +489,10 @@ def execute_resolve_plan(
                     )
                     continue
 
+                output(
+                    f"Importing {len(items_to_import)} item(s) into Resolve"
+                    " (this can take a while for large media)..."
+                )
                 imported_clips = context.media_storage.AddItemListToMediaPool(list(items_to_import))
                 if not imported_clips:
                     logger.warning(
@@ -494,6 +517,7 @@ def execute_resolve_plan(
                     context.media_pool,
                     bin_folder,
                     imported_clips,
+                    bin_cache,
                 )
                 _queue_render_jobs_for_bin(
                     context.project,
