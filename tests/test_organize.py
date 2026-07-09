@@ -27,11 +27,17 @@ class TestParseSelection:
     def test_full_range(self):
         assert parse_selection("1-3", 3) == [0, 1, 2]
 
-    def test_comma_separated(self):
+    def test_space_separated(self):
+        assert parse_selection("1 3 5", 5) == [0, 2, 4]
+
+    def test_comma_separated_still_accepted(self):
         assert parse_selection("1,3,5", 5) == [0, 2, 4]
 
     def test_mixed_range_and_single(self):
-        assert parse_selection("1,3,5-7", 10) == [0, 2, 4, 5, 6]
+        assert parse_selection("1 3 5-7", 10) == [0, 2, 4, 5, 6]
+
+    def test_mixed_spaces_and_commas(self):
+        assert parse_selection("1, 3 5-7", 10) == [0, 2, 4, 5, 6]
 
     def test_duplicates_removed(self):
         assert parse_selection("1,1,2", 5) == [0, 1]

@@ -17,14 +17,14 @@ class FolderOption:
 
 
 def parse_selection(choice: str, max_num: int) -> list[int]:
-    """Parse a selection string such as '1,3,5-7' into sorted 0-based indices.
+    """Parse a selection string such as '1 3 5-7' into sorted 0-based indices.
 
+    Tokens are separated by whitespace (commas also tolerated); ranges use '-'.
     Numbers outside [1, max_num] are silently ignored.
     Invalid tokens are silently ignored.
     """
     indices: set[int] = set()
-    for token in choice.split(","):
-        token = token.strip()
+    for token in choice.replace(",", " ").split():
         if "-" in token:
             try:
                 start_s, end_s = token.split("-", 1)

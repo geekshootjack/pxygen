@@ -73,7 +73,7 @@ Folders at depth 4:
   2. /Volumes/SSD/Footage/Shooting_Day_2
   3. /Volumes/SSD/Footage/Shooting_Day_3
 
-Select folders to process (numbers, range like 2-4, or 'all'):
+Select folders to process (numbers like '1 3 8', range like 2-4, or 'all'):
 > 1,3
 ```
 

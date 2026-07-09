@@ -91,7 +91,7 @@ def _print_folder_options(options, in_depth: int, output: OutputFn) -> None:
         rows,
         output,
     )
-    output("\nSelect folders to process (numbers, range like 2-4, or 'all'):")
+    output("\nSelect folders to process (numbers like '1 3 8', range like 2-4, or 'all'):")
 
 
 def _read_selection_indices(
@@ -441,7 +441,7 @@ def process_directory_mode(
             ],
             output,
         )
-        output("\nSelect folders to process (numbers, range like 2-4, or 'all'):")
+        output("\nSelect folders to process (numbers like '1 3 8', range like 2-4, or 'all'):")
         choice = input_func().strip()
         if choice.lower() == "all":
             selected_indices = None
