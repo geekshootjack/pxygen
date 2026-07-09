@@ -18,7 +18,6 @@ from pathlib import Path
 
 from .plan import ResolveExecutionPlan
 from .presenter import ConsolePresenter, OutputFn
-from .table_output import output_rule, output_table
 
 logger = logging.getLogger(__name__)
 
@@ -410,21 +409,26 @@ def _queue_render_jobs_for_bin(
         for clip_group in clip_groups
     ]
     if jobs:
-        output_table(
-            "Render jobs:",
-            ("Resolution", "Audio Ch", "Clips", "Preset", "Target"),
-            [
-                (
-                    clip_group.resolution,
-                    "/".join(str(c) for c in clip_group.audio_channels),
-                    len(clip_group.clips),
-                    render_preset,
-                    target_dir,
-                )
-                for clip_group, render_preset in jobs
-            ],
-            output,
-        )
+        output("  Render jobs:")
+        rows = [
+            (
+                clip_group.resolution,
+                "/".join(str(c) for c in clip_group.audio_channels) + "ch",
+                f"{len(clip_group.clips)} clips",
+                render_preset,
+            )
+            for clip_group, render_preset in jobs
+        ]
+        widths = [max(len(row[i]) for row in rows) for i in range(4)]
+        for row in rows:
+            output(
+                "    "
+                + row[0].ljust(widths[0])
+                + "  " + row[1].rjust(widths[1])
+                + "  " + row[2].rjust(widths[2])
+                + "  " + row[3].ljust(widths[3])
+                + "  ->  " + target_dir
+            )
 
     for clip_group, render_preset in jobs:
         _add_render_job(
@@ -469,8 +473,12 @@ def execute_resolve_plan(
     counter = itertools.count(1)
     bin_cache: _BinCache = {}
 
-    for footage_folder in plan.footage_folders:
-        output_rule(f"Processing: {footage_folder.footage_folder_name}", output)
+    total_folders = len(plan.footage_folders)
+    for folder_index, footage_folder in enumerate(plan.footage_folders, 1):
+        output(
+            f"\nProcessing {footage_folder.footage_folder_name}"
+            f" ({folder_index}/{total_folders})"
+        )
         logger.info("Processing footage folder %s", footage_folder.footage_folder_name)
         main_bin = context.media_pool.AddSubFolder(
             context.root_folder, footage_folder.footage_folder_name
@@ -490,8 +498,8 @@ def execute_resolve_plan(
                     continue
 
                 output(
-                    f"Importing {len(items_to_import)} item(s) into Resolve"
-                    " (this can take a while for large media)..."
+                    f"  Importing {len(items_to_import)} item(s) into Resolve"
+                    " (may take a while)..."
                 )
                 imported_clips = context.media_storage.AddItemListToMediaPool(list(items_to_import))
                 if not imported_clips:

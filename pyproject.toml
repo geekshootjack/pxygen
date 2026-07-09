@@ -7,9 +7,7 @@ name = "pxygen"
 dynamic = ["version"]
 description = "Automates proxy generation for DaVinci Resolve"
 requires-python = ">=3.10"
-dependencies = [
-    "rich>=13.9",
-]
+dependencies = []
 
 [project.scripts]
 pxygen = "pxygen.cli:main"

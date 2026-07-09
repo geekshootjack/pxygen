@@ -68,12 +68,10 @@ So `-n 1 -d 2` means: group by Day, include camera reels as subfolders.
 **Interactive selection example:**
 
 ```
-──────────────────────────── Select folders ────────────────────────────
-
-Folders at depth 4:
-  1. /Volumes/SSD/Footage/Shooting_Day_1
-  2. /Volumes/SSD/Footage/Shooting_Day_2
-  3. /Volumes/SSD/Footage/Shooting_Day_3
+Folders (3):
+  1  Shooting_Day_1
+  2  Shooting_Day_2
+  3  Shooting_Day_3
 
 Numbers like '1 3 8', range like 2-4, or 'all'
 > 1 3

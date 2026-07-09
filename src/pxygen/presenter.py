@@ -1,16 +1,36 @@
-"""Console presentation helpers for user-facing terminal output."""
+"""Console presentation helpers for user-facing terminal output.
+
+All output is plain text built with f-string alignment — no terminal UI
+dependency. CJK-safe because wide characters only ever appear in trailing
+columns (paths and folder names).
+"""
 from __future__ import annotations
 
 from collections.abc import Callable
 
-from .table_output import OutputFn, output_table
-
+OutputFn = Callable[[str], None]
 # Receives the prompt string to display inline (like builtins.input)
 InputFn = Callable[[str], str]
 
 
+def output_kv(title: str, pairs: list[tuple[str, object]], output: OutputFn) -> None:
+    """Print a titled block of aligned key-value lines."""
+    output(f"\n{title}")
+    width = max(len(key) for key, _ in pairs)
+    for key, value in pairs:
+        output(f"  {key.ljust(width)}  {value}")
+
+
+def output_numbered(title: str, items: list[str], output: OutputFn) -> None:
+    """Print a titled, numbered list (1-based)."""
+    output(f"\n{title}")
+    width = len(str(len(items)))
+    for index, item in enumerate(items, 1):
+        output(f"  {str(index).rjust(width)}  {item}")
+
+
 class ConsolePresenter:
-    """Render user-facing text and tables without routing through logging."""
+    """Render user-facing text without routing through logging."""
 
     def __init__(
         self,
@@ -23,14 +43,6 @@ class ConsolePresenter:
 
     def show(self, message: str) -> None:
         self._output(message)
-
-    def show_table(
-        self,
-        title: str,
-        headers: tuple[str, ...],
-        rows: list[tuple[object, ...]],
-    ) -> None:
-        output_table(title, headers, rows, self.show)
 
     def read_line(self, prompt: str = "> ") -> str:
         return self._input(prompt)
