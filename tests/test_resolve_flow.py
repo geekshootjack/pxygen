@@ -453,12 +453,18 @@ class TestProcessFilesInResolve:
         output_text = "\n".join(output_lines)
         assert "Render jobs:" in output_text
         assert "Resolution" in output_text
-        assert "Audio" in output_text
+        assert "Audio Ch" in output_text
         assert "Clips" in output_text
+        assert "Preset" in output_text
         assert "Target" in output_text
         assert "4096x2160" in output_text
-        assert "multi-audio" in output_text
-        assert "standard" in output_text
+        # actual channel counts, not standard/multi-audio labels
+        assert "2" in output_text
+        assert "8" in output_text
+        assert "standard" not in output_text
+        # the preset chosen per audio group is shown
+        assert "fhd-h265-5mbps" in output_text
+        assert "fhd-prores-proxy" in output_text
         assert "Render target (standard audio):" not in output_text
         assert "Render target (multi-audio):" not in output_text
         assert project.render_job_count == 2

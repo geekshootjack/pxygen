@@ -41,12 +41,9 @@ class _ResolveContext:
 class _ClipGroup:
     resolution: str
     is_multi_audio: bool
+    audio_channels: tuple[int, ...]
     clips: tuple[object, ...]
     dest_bin: object
-
-
-def _audio_group_label(is_multi_audio: bool) -> str:
-    return "multi-audio" if is_multi_audio else "standard"
 
 
 def calculate_proxy_dimensions(resolution_str: str) -> tuple[str, str]:
@@ -320,7 +317,7 @@ def _classify_clips(
     imported_clips: list,
 ) -> list[_ClipGroup]:
     # dict preserves insertion order (Python 3.7+); keys are (resolution, is_multi_audio)
-    groups: dict[tuple[str, bool], tuple[list[object], object]] = {}
+    groups: dict[tuple[str, bool], tuple[list[object], object, set[int]]] = {}
 
     for clip in imported_clips:
         if clip.GetClipProperty("Type") == "Still":
@@ -349,11 +346,12 @@ def _classify_clips(
                 if is_multi_audio
                 else res_bin
             )
-            groups[key] = ([], dest_bin)
+            groups[key] = ([], dest_bin, set())
         groups[key][0].append(clip)
+        groups[key][2].add(audio_tracks)
 
     clip_groups: list[_ClipGroup] = []
-    for (resolution, is_multi_audio), (clips, dest_bin) in groups.items():
+    for (resolution, is_multi_audio), (clips, dest_bin, channels) in groups.items():
         logger.debug(
             "Moving %d clip(s) into %r for resolution=%s multi_audio=%s",
             len(clips),
@@ -366,6 +364,7 @@ def _classify_clips(
             _ClipGroup(
                 resolution=resolution,
                 is_multi_audio=is_multi_audio,
+                audio_channels=tuple(sorted(channels)),
                 clips=tuple(clips),
                 dest_bin=dest_bin,
             )
@@ -387,28 +386,31 @@ def _queue_render_jobs_for_bin(
     counter,
     output: OutputFn,
 ) -> None:
-    if clip_groups:
+    jobs = [
+        (
+            clip_group,
+            multi_audio_preset if clip_group.is_multi_audio else standard_preset,
+        )
+        for clip_group in clip_groups
+    ]
+    if jobs:
         output_table(
             "Render jobs:",
-            ("Resolution", "Audio", "Clips", "Target"),
+            ("Resolution", "Audio Ch", "Clips", "Preset", "Target"),
             [
                 (
                     clip_group.resolution,
-                    _audio_group_label(clip_group.is_multi_audio),
+                    "/".join(str(c) for c in clip_group.audio_channels),
                     len(clip_group.clips),
+                    render_preset,
                     target_dir,
                 )
-                for clip_group in clip_groups
+                for clip_group, render_preset in jobs
             ],
             output,
         )
 
-    for clip_group in clip_groups:
-        if clip_group.is_multi_audio:
-            render_preset = multi_audio_preset
-        else:
-            render_preset = standard_preset
-
+    for clip_group, render_preset in jobs:
         _add_render_job(
             project,
             media_pool,
