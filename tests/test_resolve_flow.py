@@ -7,8 +7,10 @@ import types
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from pxygen.plan import build_resolve_execution_plan
-from pxygen.resolve import execute_resolve_plan
+from pxygen.resolve import ProxyGeneratorError, execute_resolve_plan
 
 
 def _process(
@@ -157,6 +159,9 @@ class FakeProject:
         self.render_job_count = 0
         self.started_rendering = False
         self.current_timeline = None
+
+    def GetName(self):
+        return "fake-project"
 
     def GetMediaPool(self):
         return self.media_pool
@@ -536,6 +541,47 @@ class TestProcessFilesInResolve:
         assert project.render_job_count == 1
         assert [timeline.name for timeline in media_pool.timelines] == ["0001-1920x1080"]
         assert all(timeline.name != "0001-" for timeline in media_pool.timelines)
+
+    def test_aborts_with_clear_error_when_resolve_connection_dies(self, monkeypatch):
+        items = ["/source/a.mov"]
+        imports = {tuple(items): [FakeClip("3840x2160", "2")]}
+        _, project, _ = _install_fake_resolve(monkeypatch, imports)
+        # Simulate a crashed Resolve: remote attribute lookups return None
+        project.GetName = lambda: None
+
+        with pytest.raises(ProxyGeneratorError, match="Lost connection"):
+            _process(
+                {"/footage/Day1": {"CamA": items}},
+                ["/footage/Day1"],
+                "/proxy",
+                1,
+                is_directory_mode=True,
+                confirm_render=lambda: False,
+            )
+
+    def test_saves_project_after_each_footage_folder(self, monkeypatch):
+        items_a = ["/source/a.mov"]
+        items_b = ["/source/b.mov"]
+        imports = {
+            tuple(items_a): [FakeClip("3840x2160", "2")],
+            tuple(items_b): [FakeClip("1920x1080", "2")],
+        }
+        project_manager, _, _ = _install_fake_resolve(monkeypatch, imports)
+        save_counts: list[bool] = []
+        original_save = project_manager.SaveProject
+        project_manager.SaveProject = lambda: (save_counts.append(True), original_save())[1]
+
+        _process(
+            {"/footage/Day1": {"CamA": items_a}, "/footage/Day2": {"CamB": items_b}},
+            ["/footage/Day1", "/footage/Day2"],
+            "/proxy",
+            1,
+            is_directory_mode=True,
+            confirm_render=lambda: False,
+        )
+
+        # one save per folder — queued jobs survive a later crash
+        assert len(save_counts) == 2
 
     def test_defaults_to_console_output_instead_of_logger_info(self, monkeypatch):
         items = ["/source/a.mov"]

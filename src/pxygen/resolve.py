@@ -186,6 +186,25 @@ def _connect_to_resolve(project_prefix: str) -> _ResolveContext:
     return _ResolveContext(project_manager, project, media_storage, media_pool, root_folder)
 
 
+def _ensure_resolve_alive(context: _ResolveContext) -> None:
+    """Raise if the Resolve connection has died (e.g. Resolve crashed).
+
+    fusionscript remote objects don't raise when the host process dies —
+    attribute lookups start returning None instead, which surfaces later as
+    confusing "'NoneType' object is not callable" errors.
+    """
+    try:
+        get_name = getattr(context.project, "GetName", None)
+        alive = bool(get_name and get_name())
+    except Exception:
+        alive = False
+    if not alive:
+        raise ProxyGeneratorError(
+            "Lost connection to DaVinci Resolve — it may have crashed. "
+            "Restart Resolve and re-run pxygen for the remaining folders."
+        )
+
+
 def _resolve_render_presets(codec: str) -> tuple[str, str]:
     """Return the standard and multi-audio render preset names."""
     codec_key = codec.lower()
@@ -480,9 +499,16 @@ def execute_resolve_plan(
             f" ({folder_index}/{total_folders})"
         )
         logger.info("Processing footage folder %s", footage_folder.footage_folder_name)
+        _ensure_resolve_alive(context)
         main_bin = context.media_pool.AddSubFolder(
             context.root_folder, footage_folder.footage_folder_name
         )
+        if main_bin is None:
+            _ensure_resolve_alive(context)
+            raise ProxyGeneratorError(
+                f"Resolve failed to create media pool bin "
+                f"{footage_folder.footage_folder_name!r}."
+            )
 
         for batch in footage_folder.batches:
             bin_folder = _build_bin_folder(
@@ -503,6 +529,8 @@ def execute_resolve_plan(
                 )
                 imported_clips = context.media_storage.AddItemListToMediaPool(list(items_to_import))
                 if not imported_clips:
+                    # Distinguish "nothing imported" from "Resolve died mid-import"
+                    _ensure_resolve_alive(context)
                     logger.warning(
                         "Failed to import items from %s",
                         batch.subfolder_key or footage_folder.footage_folder_name,
@@ -537,11 +565,21 @@ def execute_resolve_plan(
                     counter,
                     output,
                 )
+            except ProxyGeneratorError:
+                raise
             except Exception as exc:
                 logger.error("Error processing items: %s", exc)
+                # A dead Resolve surfaces as arbitrary exceptions on remote
+                # calls; abort instead of failing every remaining batch.
+                _ensure_resolve_alive(context)
                 continue
 
-    context.project_manager.SaveProject()
+        # Save after each folder so queued jobs survive a later Resolve crash
+        context.project_manager.SaveProject()
+        logger.debug(
+            "Saved Resolve project after folder %s", footage_folder.footage_folder_name
+        )
+
     logger.info("Saved Resolve project")
     should_start_render = confirm_render or (
         lambda: presenter.confirm("\nAll render jobs added. Start rendering now? (y/n)")
