@@ -43,7 +43,9 @@ Version is derived automatically from git tags via `hatch-vcs` — there is no v
 - `MINOR` (x.N.0) — new feature or behaviour, backwards compatible
 - `MAJOR` (N.0.0) — breaking change: CLI flags removed/renamed, output format changed, etc.
 
-**When to tag:** when the accumulated commits since the last tag are ready for users — not every commit, not every PR. A meaningful feature or important fix is a good trigger.
+**When to tag:** when the accumulated commits since the last tag are ready for users — not every commit, not every PR. A meaningful feature or important fix is a good trigger. Batch breaking changes into one MAJOR rather than releasing each immediately.
+
+**Version lineage:** the upstream project (User22's DaVinci_Script_Proxy_Generator) ended at 1.5.2. This fork deliberately bumped to v2.0.0 after the uv/package refactor to distinguish itself from upstream. Do not move back to 0.x — versions below 1.5.2 would read as older than the original. Fast MAJOR growth is acceptable here: there is no PyPI and all consumers are the author's own machines.
 
 **How to release:**
 ```sh
