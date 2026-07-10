@@ -179,16 +179,19 @@ def _setup_resolve_env() -> None:
 
 def _connect_to_resolve(project_prefix: str) -> _ResolveContext:
     """Connect to Resolve and create a fresh proxy project."""
-    _setup_resolve_env()
+    # Skip environment probing when the module is already importable
+    # (previously imported, or injected by tests).
+    if "DaVinciResolveScript" not in sys.modules:
+        _setup_resolve_env()
 
-    # Python 3.8+ on Windows calls SetDefaultDllDirectories() at startup,
-    # which disables PATH for DLL resolution. os.add_dll_directory() is the
-    # documented replacement API — needed so fusionscript.dll can find its
-    # sibling DLLs in the Resolve install directory.
-    if sys.platform == "win32":
-        resolve_lib = os.environ.get("RESOLVE_SCRIPT_LIB", "")
-        if resolve_lib:
-            os.add_dll_directory(str(Path(resolve_lib).parent))
+        # Python 3.8+ on Windows calls SetDefaultDllDirectories() at startup,
+        # which disables PATH for DLL resolution. os.add_dll_directory() is the
+        # documented replacement API — needed so fusionscript.dll can find its
+        # sibling DLLs in the Resolve install directory.
+        if sys.platform == "win32":
+            resolve_lib = os.environ.get("RESOLVE_SCRIPT_LIB", "")
+            if resolve_lib:
+                os.add_dll_directory(str(Path(resolve_lib).parent))
 
     import DaVinciResolveScript as dvr_script  # noqa: PLC0415
 
