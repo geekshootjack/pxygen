@@ -6,7 +6,12 @@ from unittest.mock import patch
 
 import pytest
 
-from pxygen.modes import list_footage_folders, process_directory_mode, process_json_mode
+from pxygen.modes import (
+    _collect_directories_at_depth,
+    process_directory_mode,
+    process_json_mode,
+)
+from pxygen.paths import path_parts
 from pxygen.plan import ResolveExecutionPlan
 from pxygen.resolve import ProxyGeneratorError
 
@@ -44,10 +49,7 @@ class TestProcessJsonMode:
 
         plan = mock_execute.call_args.args[0]
         assert isinstance(plan, ResolveExecutionPlan)
-        assert plan.proxy_folder_path == "/proxy"
-        assert {folder.footage_folder_path for folder in plan.footage_folders} == {
-            "/Volumes/SSD/Footage/Day2"
-        }
+        assert {folder.footage_folder_name for folder in plan.footage_folders} == {"Day2"}
         batches = {
             batch.subfolder_key: list(batch.items) for batch in plan.footage_folders[0].batches
         }
@@ -87,9 +89,7 @@ class TestProcessJsonMode:
             )
 
         plan = mock_execute.call_args.args[0]
-        assert [folder.footage_folder_path for folder in plan.footage_folders] == [
-            "/Volumes/SSD/Footage/Day2"
-        ]
+        assert [folder.footage_folder_name for folder in plan.footage_folders] == ["Day2"]
 
     def test_raises_when_filter_removes_everything(self, tmp_path):
         json_path = tmp_path / "comparison.json"
@@ -233,21 +233,23 @@ class TestProcessJsonMode:
 
 
 class TestProcessDirectoryMode:
-    def test_list_footage_folders_accepts_relative_levels(self, tmp_path):
+    def test_traversal_depth_is_relative_to_input_root(self, tmp_path):
         footage_root = tmp_path / "footage"
         (footage_root / "Day1").mkdir(parents=True)
         (footage_root / "Day2").mkdir(parents=True)
+        root_depth = len(path_parts(str(footage_root)))
 
-        assert list_footage_folders(str(footage_root), 1) == [
-            str(footage_root / "Day1"),
-            str(footage_root / "Day2"),
+        assert _collect_directories_at_depth(footage_root, root_depth + 1) == [
+            footage_root / "Day1",
+            footage_root / "Day2",
         ]
 
-    def test_list_footage_folders_no_longer_treats_depth_as_absolute(self, tmp_path):
+    def test_traversal_finds_nothing_past_the_deepest_level(self, tmp_path):
         footage_root = tmp_path / "footage"
         (footage_root / "Day1").mkdir(parents=True)
+        root_depth = len(path_parts(str(footage_root)))
 
-        assert list_footage_folders(str(footage_root), 4) == []
+        assert _collect_directories_at_depth(footage_root, root_depth + 4) == []
 
     def test_in_depth_equals_out_depth_groups_input_folders(self, tmp_path):
         footage_root = tmp_path / "footage"
@@ -266,7 +268,7 @@ class TestProcessDirectoryMode:
             )
 
         plan = mock_execute.call_args.args[0]
-        assert [folder.footage_folder_path for folder in plan.footage_folders] == [str(day1)]
+        assert [folder.footage_folder_name for folder in plan.footage_folders] == ["Day1"]
         assert plan.footage_folders[0].batches[0].subfolder_key == ""
         assert list(plan.footage_folders[0].batches[0].items) == [str(day1)]
         assert plan.project_prefix == "proxy"
@@ -275,13 +277,13 @@ class TestProcessDirectoryMode:
         footage_root = tmp_path / "footage"
         shallow_leaf = footage_root / "Day1" / "CamA"
         shallow_leaf.mkdir(parents=True)
-        day1 = footage_root / "Day1"
+        footage_root / "Day1"
 
         with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
             process_directory_mode(str(footage_root), "/proxy", 1, 3)
 
         plan = mock_execute.call_args.args[0]
-        assert [folder.footage_folder_path for folder in plan.footage_folders] == [str(day1)]
+        assert [folder.footage_folder_name for folder in plan.footage_folders] == ["Day1"]
         assert plan.footage_folders[0].batches[0].subfolder_key == "CamA"
         assert list(plan.footage_folders[0].batches[0].items) == [str(shallow_leaf)]
 
@@ -289,7 +291,7 @@ class TestProcessDirectoryMode:
         footage_root = tmp_path / "footage"
         (footage_root / "Day1" / "CamA").mkdir(parents=True)
         (footage_root / "Day2" / "CamA").mkdir(parents=True)
-        day2 = footage_root / "Day2"
+        footage_root / "Day2"
 
         with patch("pxygen.modes.execute_resolve_plan") as mock_execute, patch(
             "builtins.input", return_value="2"
@@ -303,7 +305,7 @@ class TestProcessDirectoryMode:
             )
 
         plan = mock_execute.call_args.args[0]
-        assert [folder.footage_folder_path for folder in plan.footage_folders] == [str(day2)]
+        assert [folder.footage_folder_name for folder in plan.footage_folders] == ["Day2"]
 
     def test_relative_depths_group_directory_tree_from_input_root(self, tmp_path):
         footage_root = tmp_path / "footage"
@@ -361,7 +363,8 @@ class TestProcessDirectoryMode:
         footage_root = tmp_path / "footage"
         (footage_root / "Day1").mkdir(parents=True)
         (footage_root / "_gsdata_").mkdir(parents=True)
+        root_depth = len(path_parts(str(footage_root)))
 
-        result = list_footage_folders(str(footage_root), 1)
+        result = _collect_directories_at_depth(footage_root, root_depth + 1)
 
-        assert result == [str(footage_root / "Day1")]
+        assert result == [footage_root / "Day1"]

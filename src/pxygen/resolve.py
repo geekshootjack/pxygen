@@ -61,7 +61,6 @@ class _ClipGroup:
     is_multi_audio: bool
     audio_channels: tuple[int, ...]
     clips: tuple[object, ...]
-    dest_bin: object
 
 
 def calculate_proxy_dimensions(resolution_str: str) -> tuple[str, str]:
@@ -448,7 +447,6 @@ def _classify_clips(
                 is_multi_audio=is_multi_audio,
                 audio_channels=tuple(sorted(channels)),
                 clips=tuple(clips),
-                dest_bin=dest_bin,
             )
         )
 

@@ -149,13 +149,6 @@ def _collect_directories_at_depth(root: Path, target_depth: int) -> list[Path]:
     return matches
 
 
-def list_footage_folders(footage_path: str, depth: int) -> list[str]:
-    """Return folders at *depth* levels below *footage_path*."""
-    root_depth = len(path_parts(footage_path))
-    resolved_depth = _normalize_depth(root_depth, depth).resolved
-    return [str(p) for p in _collect_directories_at_depth(Path(footage_path), resolved_depth)]
-
-
 def _collect_directory_tree(root: Path) -> list[Path]:
     """Return *root* and all descendant directories in traversal order."""
     directories: list[Path] = []
@@ -282,7 +275,7 @@ def process_json_mode(
     organized = organize_json_mode_files(file_list, in_depth_spec.resolved, out_depth_spec.resolved)
     logger.debug("JSON mode produced %d top-level folder group(s)", len(organized))
     if filter_mode == "select":
-        options = describe_folders_at_in_depth(organized, show_full_path=True)
+        options = describe_folders_at_in_depth(organized)
         selected_indices = _read_selection_indices(
             options, input_func=input_func, output=output
         )

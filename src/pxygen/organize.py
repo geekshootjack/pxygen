@@ -12,7 +12,6 @@ class FolderOption:
     """Display metadata for a selectable top-level folder."""
 
     full_path: str
-    label: str
     item_count: int
 
 
@@ -93,16 +92,15 @@ def organize_directory_mode_folders(
 
 def describe_folders_at_in_depth(
     organized_files: dict[str, dict[str, list[str]]],
-    *,
-    show_full_path: bool = False,
 ) -> list[FolderOption]:
     """Return display-friendly folder options without performing any I/O."""
-    options: list[FolderOption] = []
-    for full_path in sorted(organized_files):
-        item_count = sum(len(v) for v in organized_files[full_path].values())
-        label = full_path if show_full_path else Path(full_path).name
-        options.append(FolderOption(full_path=full_path, label=label, item_count=item_count))
-    return options
+    return [
+        FolderOption(
+            full_path=full_path,
+            item_count=sum(len(v) for v in organized_files[full_path].values()),
+        )
+        for full_path in sorted(organized_files)
+    ]
 
 
 def select_folders_at_in_depth(
