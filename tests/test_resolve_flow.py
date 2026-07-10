@@ -232,12 +232,12 @@ def _install_fake_resolve(monkeypatch, imports):
 
 class TestProcessFilesInResolve:
     def test_auto_codec_uses_h265_for_standard_and_prores_for_multi_audio(self, monkeypatch):
-        items = ["/source/clip1.mov", "/source/clip2.mov", "/source/still.dpx"]
+        # still.xml is filtered out before import (non-media allowlist)
+        items = ["/source/clip1.mov", "/source/clip2.mov", "/source/sidecar.xml"]
         imports = {
-            tuple(items): [
+            ("/source/clip1.mov", "/source/clip2.mov"): [
                 FakeClip("3840x2160", "2"),
                 FakeClip("3840x2160", "8"),
-                FakeClip("3840x2160", None, clip_type="Still"),
             ]
         }
         project_manager, project, media_pool = _install_fake_resolve(monkeypatch, imports)

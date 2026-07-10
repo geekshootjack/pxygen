@@ -21,7 +21,21 @@ from .presenter import ConsolePresenter, OutputFn
 
 logger = logging.getLogger(__name__)
 
-_SKIPPED_IMPORT_SUFFIXES = {".jpg", ".jpeg"}
+# Only video media is ever sent to Resolve's importer. Camera folders are
+# full of sidecars (XML, BIN, BNP/IND/INP/INT, MHL, JPG stills) that waste
+# import time at best and crash Resolve's decoder at worst.
+_MEDIA_IMPORT_SUFFIXES = {
+    ".avi",
+    ".braw",
+    ".crm",
+    ".dng",
+    ".m2ts",
+    ".mov",
+    ".mp4",
+    ".mts",
+    ".mxf",
+    ".r3d",
+}
 
 # Import media in chunks: keeps each AddItemListToMediaPool transaction small,
 # isolates failures to one chunk instead of the whole batch, and lets the TUI
@@ -255,9 +269,15 @@ def _build_bin_folder(media_pool, main_bin, bin_parts: tuple[str, ...], cache: _
 
 
 def _filter_import_items(items: tuple[str, ...]) -> tuple[str, ...]:
-    """Expand import items and drop files that should never be sent to Resolve."""
+    """Expand import items and keep only video media for Resolve import."""
     filtered_items: list[str] = []
     skipped_items: list[str] = []
+
+    def _keep(path_str: str, suffix: str) -> None:
+        if suffix.lower() in _MEDIA_IMPORT_SUFFIXES:
+            filtered_items.append(path_str)
+        else:
+            skipped_items.append(path_str)
 
     for item in items:
         item_path = Path(item)
@@ -266,19 +286,14 @@ def _filter_import_items(items: tuple[str, ...]) -> tuple[str, ...]:
                 (path for path in item_path.rglob("*") if path.is_file()),
                 key=lambda path: path.as_posix(),
             ):
-                if child.suffix.lower() in _SKIPPED_IMPORT_SUFFIXES:
-                    skipped_items.append(str(child))
-                    continue
-                filtered_items.append(str(child))
+                _keep(str(child), child.suffix)
             continue
-
-        if item_path.suffix.lower() in _SKIPPED_IMPORT_SUFFIXES:
-            skipped_items.append(item)
-            continue
-        filtered_items.append(item)
+        _keep(item, item_path.suffix)
 
     if skipped_items:
-        logger.info("Skipping %d JPG/JPEG item(s) before Resolve import", len(skipped_items))
+        logger.info(
+            "Skipping %d non-media item(s) before Resolve import", len(skipped_items)
+        )
         logger.debug("Skipped import items: %s", skipped_items)
 
     return tuple(filtered_items)
