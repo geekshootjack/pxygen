@@ -57,6 +57,20 @@ Or run once without installing:
 uvx --from git+https://github.com/geekshootjack/pxygen pxygen -i ... -o ...
 ```
 
+### Offline install (no GitHub access)
+
+For machines that cannot reach GitHub: download the `.whl` from the
+[Releases page](https://github.com/geekshootjack/pxygen/releases) on any
+connected machine, copy it over (USB drive, LAN share), then:
+
+```sh
+uv tool install ./pxygen-3.0.0-py3-none-any.whl
+uv tool install --force ./pxygen-4.0.0-py3-none-any.whl   # upgrade to a newer wheel
+```
+
+The machine still needs [uv](https://docs.astral.sh/uv/) and an official
+python.org build installed — see Requirements above.
+
 For development:
 
 ```sh
