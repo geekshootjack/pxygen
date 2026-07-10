@@ -542,6 +542,36 @@ class TestProcessFilesInResolve:
         assert [timeline.name for timeline in media_pool.timelines] == ["0001-1920x1080"]
         assert all(timeline.name != "0001-" for timeline in media_pool.timelines)
 
+    def test_imports_items_in_chunks(self, monkeypatch):
+        items = ["/source/a.mov", "/source/b.mov", "/source/c.mov"]
+        imports = {
+            ("/source/a.mov", "/source/b.mov"): [
+                FakeClip("3840x2160", "2"),
+                FakeClip("3840x2160", "2"),
+            ],
+            ("/source/c.mov",): [FakeClip("3840x2160", "2")],
+        }
+        _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
+        monkeypatch.setattr("pxygen.resolve._IMPORT_CHUNK_SIZE", 2)
+        output_lines: list[str] = []
+
+        _process(
+            {"/footage/Day1": {"CamA": items}},
+            ["/footage/Day1"],
+            "/proxy",
+            1,
+            is_directory_mode=True,
+            output=output_lines.append,
+            confirm_render=lambda: False,
+        )
+
+        # both chunks imported and merged into one render job
+        assert project.render_job_count == 1
+        assert len(media_pool.timelines[0].clips) == 3
+        output_text = "\n".join(output_lines)
+        assert "imported 2/3" in output_text
+        assert "imported 3/3" in output_text
+
     def test_aborts_with_clear_error_when_resolve_connection_dies(self, monkeypatch):
         items = ["/source/a.mov"]
         imports = {tuple(items): [FakeClip("3840x2160", "2")]}

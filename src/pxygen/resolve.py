@@ -23,6 +23,11 @@ logger = logging.getLogger(__name__)
 
 _SKIPPED_IMPORT_SUFFIXES = {".jpg", ".jpeg"}
 
+# Import media in chunks: keeps each AddItemListToMediaPool transaction small,
+# isolates failures to one chunk instead of the whole batch, and lets the TUI
+# show progress during long imports.
+_IMPORT_CHUNK_SIZE = 100
+
 class ProxyGeneratorError(Exception):
     """Raised for expected, user-facing errors in proxy generation."""
 
@@ -279,6 +284,34 @@ def _filter_import_items(items: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(filtered_items)
 
 
+def _import_items_chunked(
+    context: _ResolveContext,
+    items: tuple[str, ...],
+    output: OutputFn,
+) -> list:
+    """Import *items* through AddItemListToMediaPool in fixed-size chunks."""
+    imported: list = []
+    total = len(items)
+    show_progress = total > _IMPORT_CHUNK_SIZE
+    for start in range(0, total, _IMPORT_CHUNK_SIZE):
+        chunk = list(items[start:start + _IMPORT_CHUNK_SIZE])
+        clips = context.media_storage.AddItemListToMediaPool(chunk)
+        if clips:
+            imported.extend(clips)
+        else:
+            # Distinguish "nothing imported" from "Resolve died mid-import"
+            _ensure_resolve_alive(context)
+            logger.warning(
+                "Import returned no clips for chunk of %d item(s) (%s .. %s)",
+                len(chunk),
+                chunk[0],
+                chunk[-1],
+            )
+        if show_progress:
+            output(f"    imported {min(start + _IMPORT_CHUNK_SIZE, total)}/{total}")
+    return imported
+
+
 def _add_render_job(
     project,
     media_pool,
@@ -527,10 +560,8 @@ def execute_resolve_plan(
                     f"  Importing {len(items_to_import)} item(s) into Resolve"
                     " (may take a while)..."
                 )
-                imported_clips = context.media_storage.AddItemListToMediaPool(list(items_to_import))
+                imported_clips = _import_items_chunked(context, items_to_import, output)
                 if not imported_clips:
-                    # Distinguish "nothing imported" from "Resolve died mid-import"
-                    _ensure_resolve_alive(context)
                     logger.warning(
                         "Failed to import items from %s",
                         batch.subfolder_key or footage_folder.footage_folder_name,
