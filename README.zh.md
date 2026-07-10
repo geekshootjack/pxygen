@@ -20,53 +20,23 @@ pxygen 将素材导入 DaVinci Resolve，按照文件夹层级自动建立媒体
 
 - Python ≥ 3.10，**必须是 64 位**官方 python.org 版本（Resolve 脚本接口不兼容 uv 托管的 Python）
 - DaVinci Resolve ≥ 19.1.4（运行脚本前需保持 Resolve 开启）
-- Resolve 渲染预设：`FHD_h.265_420_8bit_5Mbps`、`FHD_prores_proxy`
+- Resolve 渲染预设：`fhd-h265-5mbps`、`fhd-prores-proxy`
 - Resolve 数据烧录预设：`burn-in`
 
 ## 环境变量配置
 
-DaVinci Resolve 通过环境变量暴露脚本 API，运行前需要设置：
+标准安装的 Resolve **无需任何配置**——pxygen 会自动探测各平台的标准脚本路径
+（macOS 标准版和 App Store Studio 版、Windows、Linux），并自行处理
+`sys.path` 和 DLL 查找。
 
-<details>
-<summary>macOS（标准安装）</summary>
-
-```sh
-export RESOLVE_SCRIPT_API="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting"
-export RESOLVE_SCRIPT_LIB="/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Libraries/Fusion/fusionscript.so"
-export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
-```
-</details>
-
-<details>
-<summary>macOS（App Store 安装版）</summary>
+只有 Resolve 装在非标准路径时才需要手动指定：
 
 ```sh
-export RESOLVE_SCRIPT_API="/Applications/DaVinci Resolve Studio.app/Contents/Resources/Developer/Scripting"
-export RESOLVE_SCRIPT_LIB="/Applications/DaVinci Resolve Studio.app/Contents/Libraries/Fusion/fusionscript.so"
-export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
+RESOLVE_SCRIPT_API=<指向 .../Developer/Scripting 的路径>
+RESOLVE_SCRIPT_LIB=<指向 fusionscript.dll / .so / .dylib 的路径>
 ```
-</details>
 
-<details>
-<summary>Windows</summary>
-
-```bat
-set RESOLVE_SCRIPT_API=%PROGRAMDATA%\Blackmagic Design\DaVinci Resolve\Support\Developer\Scripting
-set RESOLVE_SCRIPT_LIB=C:\Program Files\Blackmagic Design\DaVinci Resolve\fusionscript.dll
-set PYTHONPATH=%PYTHONPATH%;%RESOLVE_SCRIPT_API%\Modules\
-set PATH=%PATH%;C:\Program Files\Blackmagic Design\DaVinci Resolve
-```
-</details>
-
-<details>
-<summary>Linux</summary>
-
-```sh
-export RESOLVE_SCRIPT_API="/opt/resolve/Developer/Scripting"
-export RESOLVE_SCRIPT_LIB="/opt/resolve/libs/Fusion/fusionscript.so"
-export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
-```
-</details>
+`PYTHONPATH` 和 `PATH` 都不需要动。
 
 ## 安装
 
@@ -122,7 +92,7 @@ Production/
 │   │   ├── A001_C001/
 │   │   └── B001_C001/
 │   └── Shooting_Day_2/
-└── Proxy/          ← 代理输出到这里
+└── Proxy/
 ```
 
 ## 文档

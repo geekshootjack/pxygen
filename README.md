@@ -25,71 +25,18 @@ pxygen imports your footage into DaVinci Resolve, organises it into bins that mi
 
 ## Environment Setup
 
-For standard Resolve installs, pxygen detects the scripting environment automatically — no manual setup needed.
+None needed for standard Resolve installs — pxygen probes the well-known
+scripting locations on macOS (standard and App Store Studio), Windows, and
+Linux, and configures `sys.path` and DLL lookup by itself.
 
-If auto-detection fails (non-standard install path), set these variables manually before running pxygen:
-
-<details>
-<summary>macOS (standard install) — bash/zsh</summary>
-
-```sh
-export RESOLVE_SCRIPT_API="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting"
-export RESOLVE_SCRIPT_LIB="/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Libraries/Fusion/fusionscript.so"
-export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
-```
-</details>
-
-<details>
-<summary>macOS (App Store install) — bash/zsh</summary>
+Only if Resolve lives at a non-standard path, point pxygen at it:
 
 ```sh
-export RESOLVE_SCRIPT_API="/Applications/DaVinci Resolve Studio.app/Contents/Resources/Developer/Scripting"
-export RESOLVE_SCRIPT_LIB="/Applications/DaVinci Resolve Studio.app/Contents/Libraries/Fusion/fusionscript.so"
-export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
+RESOLVE_SCRIPT_API=<path to .../Developer/Scripting>
+RESOLVE_SCRIPT_LIB=<path to fusionscript.dll / .so / .dylib>
 ```
-</details>
 
-<details>
-<summary>Windows — PowerShell</summary>
-
-```powershell
-$env:RESOLVE_SCRIPT_API = "$env:PROGRAMDATA\Blackmagic Design\DaVinci Resolve\Support\Developer\Scripting"
-$env:RESOLVE_SCRIPT_LIB = "C:\Program Files\Blackmagic Design\DaVinci Resolve\fusionscript.dll"
-$env:PYTHONPATH = "$env:PYTHONPATH;$env:RESOLVE_SCRIPT_API\Modules\"
-$env:PATH = "$env:PATH;C:\Program Files\Blackmagic Design\DaVinci Resolve"
-```
-</details>
-
-<details>
-<summary>Windows — Command Prompt</summary>
-
-```bat
-set RESOLVE_SCRIPT_API=%PROGRAMDATA%\Blackmagic Design\DaVinci Resolve\Support\Developer\Scripting
-set RESOLVE_SCRIPT_LIB=C:\Program Files\Blackmagic Design\DaVinci Resolve\fusionscript.dll
-set PYTHONPATH=%PYTHONPATH%;%RESOLVE_SCRIPT_API%\Modules\
-set PATH=%PATH%;C:\Program Files\Blackmagic Design\DaVinci Resolve
-```
-</details>
-
-<details>
-<summary>Linux — bash/zsh</summary>
-
-```sh
-export RESOLVE_SCRIPT_API="/opt/resolve/Developer/Scripting"
-export RESOLVE_SCRIPT_LIB="/opt/resolve/libs/Fusion/fusionscript.so"
-export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
-```
-</details>
-
-<details>
-<summary>Linux — fish</summary>
-
-```fish
-set -x RESOLVE_SCRIPT_API "/opt/resolve/Developer/Scripting"
-set -x RESOLVE_SCRIPT_LIB "/opt/resolve/libs/Fusion/fusionscript.so"
-set -x PYTHONPATH "$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
-```
-</details>
+`PYTHONPATH` and `PATH` do not need to be touched.
 
 ## Installation
 
@@ -145,7 +92,7 @@ Production/
 │   │   ├── A001_C001/
 │   │   └── B001_C001/
 │   └── Shooting_Day_2/
-└── Proxy/          ← output goes here
+└── Proxy/
 ```
 
 ## Documentation
