@@ -13,7 +13,7 @@ pxygen 将素材导入 DaVinci Resolve，按照文件夹层级自动建立媒体
 - **两种模式** — 直接从文件夹树导入，或基于 [File_Compare](https://github.com/UserProjekt/File_Compare) 的 JSON 结果重新生成缺失代理
 - **智能编码选择** — 音频通道 ≤ 4 用 H.265，> 4 用 ProRes Proxy（解决 Adobe Premiere 兼容性问题）
 - **文件夹筛选** — 交互式选择拍摄日（`--select`）或按名称过滤（`--filter`）
-- **跨平台支持** — macOS、Windows、Linux
+- **跨平台支持** — Windows、macOS
 
 ## 环境要求
 
