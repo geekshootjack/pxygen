@@ -90,7 +90,6 @@ already-queued jobs stay in the saved Resolve project.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `-c, --clean-image` | off | Skip burn-in overlays (timecode + clip name) |
 | `-k, --codec CODEC` | `auto` | Override render preset (see below) |
 
 **Codec values:**
@@ -117,9 +116,9 @@ pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 1 -d 2
 # Force ProRes for all clips
 pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 1 -d 2 -k prores
 
-# Clean proxies (no burn-in), specific days
+# Specific days only
 pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 1 -d 2 \
-  -c --filter Shooting_Day_3 Shooting_Day_4
+  --filter Shooting_Day_3 Shooting_Day_4
 
 # JSON mode, group 2, interactive selection
 pxygen -i comparison.json -o /Volumes/SSD/Proxy -g 2 -n 1 -d 2 --select

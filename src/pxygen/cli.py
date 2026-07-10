@@ -92,10 +92,6 @@ def _build_parser():
     )
 
     parser.add_argument(
-        "-c", "--clean-image", action="store_true",
-        help="Generate proxies without burn-in overlays",
-    )
-    parser.add_argument(
         "-k", "--codec",
         choices=["auto", "prores", "h265", "hevc", "265"],
         default="auto",
@@ -125,7 +121,6 @@ def main() -> None:
     filter_list = args.filter if filter_mode == "filter" else None
 
     shared = dict(
-        clean_image=args.clean_image,
         filter_mode=filter_mode,
         filter_list=filter_list,
         codec=args.codec,

@@ -44,7 +44,6 @@ class TestProcessJsonMode:
                 1,
                 2,
                 codec="prores",
-                clean_image=True,
             )
 
         plan = mock_execute.call_args.args[0]
@@ -60,7 +59,6 @@ class TestProcessJsonMode:
             "/Volumes/SSD/Footage/Day2/CamB/clip2.mov"
         ]
         assert plan.codec == "prores"
-        assert plan.clean_image is True
         assert plan.project_prefix == "proxy_redo"
 
     def test_filter_mode_limits_selected_folders(self, tmp_path):

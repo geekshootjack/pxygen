@@ -12,7 +12,7 @@ pxygen imports your footage into DaVinci Resolve, organises it into bins that mi
 
 - **Two modes** — import directly from a folder tree, or re-generate missing proxies from a [File_Compare](https://github.com/UserProjekt/File_Compare) JSON
 - **Smart codec selection** — H.265 for ≤ 4 audio channels, ProRes Proxy for > 4 (Adobe Premiere compatibility)
-- **Burn-in overlays** — source clip name + timecode applied automatically; disable with `-c`
+- **Burn-in overlays** — source clip name + timecode applied automatically (disable in Resolve's Data Burn-In panel before rendering if unwanted)
 - **Folder filtering** — process specific shooting days interactively (`--select`) or by name (`--filter`)
 - **Cross-platform** — macOS, Windows, Linux
 

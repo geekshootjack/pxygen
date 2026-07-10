@@ -168,7 +168,6 @@ def process_json_mode(
     in_depth: int,
     out_depth: int,
     *,
-    clean_image: bool = False,
     filter_mode: str | None = None,
     filter_list: list[str] | None = None,
     codec: str = "auto",
@@ -184,7 +183,6 @@ def process_json_mode(
         dataset: Which group to use from the comparison (1 or 2).
         in_depth: Folder level relative to the inferred footage root.
         out_depth: Batch level relative to the inferred footage root.
-        clean_image: Skip burn-in overlay when ``True``.
         filter_mode: ``'select'`` or ``'filter'`` or ``None``.
         filter_list: Folder names to keep (only used when
             filter_mode == ``'filter'``).
@@ -301,7 +299,6 @@ def process_json_mode(
         list(organized),
         proxy_path,
         mode_name="json",
-        clean_image=clean_image,
         codec=codec,
     )
     logger.debug(
@@ -317,7 +314,6 @@ def process_directory_mode(
     in_depth: int,
     out_depth: int,
     *,
-    clean_image: bool = False,
     filter_mode: str | None = None,
     filter_list: list[str] | None = None,
     codec: str = "auto",
@@ -332,7 +328,6 @@ def process_directory_mode(
         proxy_path: Root output directory for proxies.
         in_depth: Folder level relative to the provided footage root.
         out_depth: Batch level relative to the provided footage root.
-        clean_image: Skip burn-in overlay when ``True``.
         filter_mode: ``'select'`` or ``'filter'`` or ``None``.
         filter_list: Folder names to keep (only used when
             filter_mode == ``'filter'``).
@@ -485,7 +480,6 @@ def process_directory_mode(
         list(organized),
         proxy_path,
         mode_name="directory",
-        clean_image=clean_image,
         codec=codec,
     )
     logger.debug(

@@ -529,24 +529,21 @@ def execute_resolve_plan(
     context = _connect_to_resolve(plan.project_prefix)
     standard_preset, multi_audio_preset = _resolve_render_presets(plan.codec)
     logger.info(
-        "Executing Resolve plan mode=%s project_prefix=%s footage_folders=%d"
-        " codec=%s clean_image=%s",
+        "Executing Resolve plan mode=%s project_prefix=%s footage_folders=%d codec=%s",
         plan.mode_name,
         plan.project_prefix,
         len(plan.footage_folders),
         plan.codec,
-        plan.clean_image,
     )
 
-    if not plan.clean_image:
-        if context.project.LoadBurnInPreset(_BURN_IN_PRESET):
-            logger.debug("Loaded burn-in preset %r", _BURN_IN_PRESET)
-        else:
-            logger.warning(
-                "Burn-in preset %r not found in Resolve; proxies will render"
-                " without burn-ins. Import it from presets/burn-in-vertical.xml.",
-                _BURN_IN_PRESET,
-            )
+    if context.project.LoadBurnInPreset(_BURN_IN_PRESET):
+        logger.debug("Loaded burn-in preset %r", _BURN_IN_PRESET)
+    else:
+        logger.warning(
+            "Burn-in preset %r not found in Resolve; proxies will render"
+            " without burn-ins. Import it from presets/burn-in-vertical.xml.",
+            _BURN_IN_PRESET,
+        )
 
     counter = itertools.count(1)
     bin_cache: _BinCache = {}

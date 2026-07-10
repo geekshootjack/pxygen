@@ -31,7 +31,6 @@ class ResolveExecutionPlan:
 
     mode_name: str
     project_prefix: str
-    clean_image: bool
     codec: str
     footage_folders: tuple[PlannedFootageFolder, ...]
 
@@ -42,7 +41,6 @@ def build_resolve_execution_plan(
     proxy_folder_path: str,
     *,
     mode_name: str,
-    clean_image: bool = False,
     codec: str = "auto",
 ) -> ResolveExecutionPlan:
     """Build an execution plan from organized folder mappings."""
@@ -77,7 +75,6 @@ def build_resolve_execution_plan(
     return ResolveExecutionPlan(
         mode_name=mode_name,
         project_prefix=project_prefix,
-        clean_image=clean_image,
         codec=codec,
         footage_folders=tuple(footage_folders),
     )

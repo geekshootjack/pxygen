@@ -56,10 +56,6 @@ class TestParser:
         with pytest.raises(SystemExit):
             self._parse(["-i", "/f", "-o", "/p", "-s", "-f", "Day1"])
 
-    def test_clean_image_short(self):
-        args = self._parse(["-i", "/f", "-o", "/p", "-c"])
-        assert args.clean_image is True
-
     def test_codec_short(self):
         args = self._parse(["-i", "/f", "-o", "/p", "-k", "prores"])
         assert args.codec == "prores"
@@ -75,7 +71,6 @@ class TestParser:
         assert args.group == 1
         assert args.codec == "auto"
         assert args.log_level == "warning"
-        assert args.clean_image is False
         assert args.select is False
         assert args.filter is None
 
@@ -212,14 +207,6 @@ class TestDispatch:
             self._run(["-i", str(footage), "-o", "/proxy", "-k", "prores"])
             _, kwargs = mock_dir.call_args
             assert kwargs["codec"] == "prores"
-
-    def test_clean_image_passed_through(self, tmp_path):
-        footage = tmp_path / "footage"
-        footage.mkdir()
-        with patch(_MOCK_DIR) as mock_dir:
-            self._run(["-i", str(footage), "-o", "/proxy", "-c"])
-            _, kwargs = mock_dir.call_args
-            assert kwargs["clean_image"] is True
 
     def test_attribute_error_logged(self, caplog):
         with patch("sys.argv", ["pxygen", "-i", "/tmp/a.json", "-o", "/proxy"]), patch(

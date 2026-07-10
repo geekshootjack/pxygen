@@ -21,7 +21,6 @@ def _process(
     _subfolder_depth=None,
     *,
     is_directory_mode=False,
-    clean_image=False,
     codec="auto",
     output=None,
     confirm_render=None,
@@ -31,7 +30,6 @@ def _process(
         selected_footage_folders,
         proxy_folder_path,
         mode_name="directory" if is_directory_mode else "json",
-        clean_image=clean_image,
         codec=codec,
     )
     execute_resolve_plan(plan, output=output, confirm_render=confirm_render)
@@ -361,13 +359,12 @@ class TestProcessFilesInResolve:
             "/proxy",
             0,
             is_directory_mode=False,
-            clean_image=True,
             codec="prores",
         )
 
         assert project_manager.saved is True
         assert project.started_rendering is True
-        assert project.loaded_burn_in_presets == []
+        assert project.loaded_burn_in_presets == ["burn-in-vertical"]
         assert project.loaded_render_presets == ["fhd-prores-proxy"]
         assert project.render_job_count == 1
         assert [timeline.name for timeline in media_pool.timelines] == ["0001-1920x1080"]
