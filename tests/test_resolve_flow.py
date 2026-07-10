@@ -272,9 +272,9 @@ class TestProcessFilesInResolve:
         cam_folder = day_folder.GetSubFolderList()[0]
         resolution_folder = cam_folder.GetSubFolderList()[0]
         assert resolution_folder.GetName() == "3840x2160"
-        assert len(resolution_folder.GetClipList()) == 1
-        assert resolution_folder.GetSubFolderList()[0].GetName() == "MultiAudio_5+"
-        assert len(resolution_folder.GetSubFolderList()[0].GetClipList()) == 1
+        # standard and multi-audio clips share the resolution bin — no sub-bin
+        assert len(resolution_folder.GetClipList()) == 2
+        assert resolution_folder.GetSubFolderList() == []
 
     def test_skips_jpg_inputs_before_resolve_import(self, monkeypatch):
         items = [

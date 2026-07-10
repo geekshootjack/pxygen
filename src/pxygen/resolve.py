@@ -435,19 +435,13 @@ def _classify_clips(
     clip_groups: list[_ClipGroup] = []
     for (resolution, is_multi_audio), (clips, channels) in groups.items():
         res_bin = _get_or_create_subfolder(media_pool, bin_folder, resolution, bin_cache)
-        dest_bin = (
-            _get_or_create_subfolder(media_pool, res_bin, "MultiAudio_5+", bin_cache)
-            if is_multi_audio
-            else res_bin
-        )
         logger.debug(
-            "Moving %d clip(s) into %r for resolution=%s multi_audio=%s",
+            "Moving %d clip(s) into bin %r (multi_audio=%s)",
             len(clips),
-            dest_bin.GetName(),
             resolution,
             is_multi_audio,
         )
-        media_pool.MoveClips(clips, dest_bin)
+        media_pool.MoveClips(clips, res_bin)
         clip_groups.append(
             _ClipGroup(
                 resolution=resolution,
