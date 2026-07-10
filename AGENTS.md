@@ -20,7 +20,7 @@ Common types: `feat`, `fix`, `chore`, `refactor`, `test`, `docs`
 
 ## Cross-OS Test Rules
 
-CI runs on Linux, Windows, and macOS. Two rules that have caused real failures:
+CI runs on Windows and macOS. Two rules that have caused real failures:
 
 - Never hardcode path separators in test expectations; build them with `Path`
   so they hold on Windows (`\`) and POSIX (`/`).
