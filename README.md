@@ -69,7 +69,9 @@ uv tool install --force ./pxygen-4.0.0-py3-none-any.whl   # upgrade to a newer w
 ```
 
 The machine still needs [uv](https://docs.astral.sh/uv/) and an official
-python.org build installed — see Requirements above.
+python.org build installed. For a complete from-zero offline bootstrap
+(Python + uv + pxygen + Resolve presets on a USB drive), see
+**[docs/installation.md](docs/installation.md)**.
 
 For development:
 

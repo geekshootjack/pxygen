@@ -57,7 +57,7 @@ uv tool install --force git+https://github.com/geekshootjack/pxygen@v2.1.0
 uvx --from git+https://github.com/geekshootjack/pxygen pxygen -i ... -o ...
 ```
 
-### 离线安装（无法访问 GitHub 的机器）
+### 离线安装
 
 对于连不上 GitHub 的电脑：在任何一台能联网的机器上从
 [Releases 页面](https://github.com/geekshootjack/pxygen/releases)下载 `.whl`
@@ -69,7 +69,8 @@ uv tool install --force ./pxygen-4.0.0-py3-none-any.whl   # 升级到新版 whee
 ```
 
 目标机器上仍需装有 [uv](https://docs.astral.sh/uv/) 和官方 python.org 版
-Python——见上方"环境要求"。
+Python。完整的从零离线部署清单（U 盘带齐 Python + uv + pxygen + Resolve
+预设）见 **[docs/installation.md](docs/installation.md)**。
 
 开发环境：
 
