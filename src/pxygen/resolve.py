@@ -16,13 +16,35 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from .plan import ResolveExecutionPlan, build_resolve_execution_plan
-from .presenter import ConsolePresenter, OutputFn
-from .table_output import output_table
+from .plan import ResolveExecutionPlan
+from .presenter import ConsolePresenter, OutputFn, UserAbort
 
 logger = logging.getLogger(__name__)
 
-_SKIPPED_IMPORT_SUFFIXES = {".jpg", ".jpeg"}
+# Only video media is ever sent to Resolve's importer. Camera folders are
+# full of sidecars (XML, BIN, BNP/IND/INP/INT, MHL, JPG stills) that waste
+# import time at best and crash Resolve's decoder at worst.
+_MEDIA_IMPORT_SUFFIXES = {
+    ".avi",
+    ".braw",
+    ".crm",
+    ".dng",
+    ".m2ts",
+    ".mov",
+    ".mp4",
+    ".mts",
+    ".mxf",
+    ".r3d",
+}
+
+# Centered layout (clip name top, timecode below it) that fits both landscape
+# and portrait proxies; exported copy lives in presets/burn-in-vertical.xml
+_BURN_IN_PRESET = "burn-in-vertical"
+
+# Import media in chunks: keeps each AddItemListToMediaPool transaction small,
+# isolates failures to one chunk instead of the whole batch, and lets the TUI
+# show progress during long imports.
+_IMPORT_CHUNK_SIZE = 100
 
 class ProxyGeneratorError(Exception):
     """Raised for expected, user-facing errors in proxy generation."""
@@ -41,12 +63,8 @@ class _ResolveContext:
 class _ClipGroup:
     resolution: str
     is_multi_audio: bool
+    audio_channels: tuple[int, ...]
     clips: tuple[object, ...]
-    dest_bin: object
-
-
-def _audio_group_label(is_multi_audio: bool) -> str:
-    return "multi-audio" if is_multi_audio else "standard"
 
 
 def calculate_proxy_dimensions(resolution_str: str) -> tuple[str, str]:
@@ -114,19 +132,24 @@ def _setup_resolve_env() -> None:
     if sys.platform == "darwin":
         candidates = [
             (
-                Path("/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting"),
-                Path("/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Libraries/Fusion/fusionscript.so"),
+                Path("/Library/Application Support/Blackmagic Design/DaVinci Resolve")
+                / "Developer/Scripting",
+                Path("/Applications/DaVinci Resolve/DaVinci Resolve.app")
+                / "Contents/Libraries/Fusion/fusionscript.so",
             ),
             (
-                Path("/Applications/DaVinci Resolve Studio.app/Contents/Resources/Developer/Scripting"),
-                Path("/Applications/DaVinci Resolve Studio.app/Contents/Libraries/Fusion/fusionscript.so"),
+                Path("/Applications/DaVinci Resolve Studio.app")
+                / "Contents/Resources/Developer/Scripting",
+                Path("/Applications/DaVinci Resolve Studio.app")
+                / "Contents/Libraries/Fusion/fusionscript.so",
             ),
         ]
     elif sys.platform == "win32":
         programdata = Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData"))
         candidates = [
             (
-                programdata / "Blackmagic Design" / "DaVinci Resolve" / "Support" / "Developer" / "Scripting",
+                programdata / "Blackmagic Design" / "DaVinci Resolve"
+                / "Support" / "Developer" / "Scripting",
                 Path(r"C:\Program Files\Blackmagic Design\DaVinci Resolve\fusionscript.dll"),
             ),
         ]
@@ -156,16 +179,19 @@ def _setup_resolve_env() -> None:
 
 def _connect_to_resolve(project_prefix: str) -> _ResolveContext:
     """Connect to Resolve and create a fresh proxy project."""
-    _setup_resolve_env()
+    # Skip environment probing when the module is already importable
+    # (previously imported, or injected by tests).
+    if "DaVinciResolveScript" not in sys.modules:
+        _setup_resolve_env()
 
-    # Python 3.8+ on Windows calls SetDefaultDllDirectories() at startup,
-    # which disables PATH for DLL resolution. os.add_dll_directory() is the
-    # documented replacement API — needed so fusionscript.dll can find its
-    # sibling DLLs in the Resolve install directory.
-    if sys.platform == "win32":
-        resolve_lib = os.environ.get("RESOLVE_SCRIPT_LIB", "")
-        if resolve_lib:
-            os.add_dll_directory(str(Path(resolve_lib).parent))
+        # Python 3.8+ on Windows calls SetDefaultDllDirectories() at startup,
+        # which disables PATH for DLL resolution. os.add_dll_directory() is the
+        # documented replacement API — needed so fusionscript.dll can find its
+        # sibling DLLs in the Resolve install directory.
+        if sys.platform == "win32":
+            resolve_lib = os.environ.get("RESOLVE_SCRIPT_LIB", "")
+            if resolve_lib:
+                os.add_dll_directory(str(Path(resolve_lib).parent))
 
     import DaVinciResolveScript as dvr_script  # noqa: PLC0415
 
@@ -185,6 +211,25 @@ def _connect_to_resolve(project_prefix: str) -> _ResolveContext:
     return _ResolveContext(project_manager, project, media_storage, media_pool, root_folder)
 
 
+def _ensure_resolve_alive(context: _ResolveContext) -> None:
+    """Raise if the Resolve connection has died (e.g. Resolve crashed).
+
+    fusionscript remote objects don't raise when the host process dies —
+    attribute lookups start returning None instead, which surfaces later as
+    confusing "'NoneType' object is not callable" errors.
+    """
+    try:
+        get_name = getattr(context.project, "GetName", None)
+        alive = bool(get_name and get_name())
+    except Exception:
+        alive = False
+    if not alive:
+        raise ProxyGeneratorError(
+            "Lost connection to DaVinci Resolve — it may have crashed. "
+            "Restart Resolve and re-run pxygen for the remaining folders."
+        )
+
+
 def _resolve_render_presets(codec: str) -> tuple[str, str]:
     """Return the standard and multi-audio render preset names."""
     codec_key = codec.lower()
@@ -195,12 +240,23 @@ def _resolve_render_presets(codec: str) -> tuple[str, str]:
     return "fhd-h265-5mbps", "fhd-prores-proxy"
 
 
-def _get_or_create_subfolder(media_pool, parent, name: str):
+# Cache of (id(parent), name) -> folder to avoid re-probing Resolve on every
+# lookup; each GetSubFolderList/GetName is a cross-process API round-trip.
+_BinCache = dict
+
+
+def _get_or_create_subfolder(media_pool, parent, name: str, cache: _BinCache):
+    key = (id(parent), name)
+    if key in cache:
+        return cache[key]
     for folder in parent.GetSubFolderList():
         if folder.GetName() == name:
+            cache[key] = folder
             return folder
     logger.debug("Creating subfolder %r under %r", name, parent.GetName())
-    return media_pool.AddSubFolder(parent, name)
+    folder = media_pool.AddSubFolder(parent, name)
+    cache[key] = folder
+    return folder
 
 
 def _build_timeline_name(index: int, resolution: str, *, is_multi_audio: bool) -> str:
@@ -211,17 +267,23 @@ def _build_timeline_name(index: int, resolution: str, *, is_multi_audio: bool) -
     return base_name
 
 
-def _build_bin_folder(media_pool, main_bin, bin_parts: tuple[str, ...]):
+def _build_bin_folder(media_pool, main_bin, bin_parts: tuple[str, ...], cache: _BinCache):
     bin_folder = main_bin
     for part in bin_parts:
-        bin_folder = _get_or_create_subfolder(media_pool, bin_folder, part)
+        bin_folder = _get_or_create_subfolder(media_pool, bin_folder, part, cache)
     return bin_folder
 
 
 def _filter_import_items(items: tuple[str, ...]) -> tuple[str, ...]:
-    """Expand import items and drop files that should never be sent to Resolve."""
+    """Expand import items and keep only video media for Resolve import."""
     filtered_items: list[str] = []
     skipped_items: list[str] = []
+
+    def _keep(path_str: str, suffix: str) -> None:
+        if suffix.lower() in _MEDIA_IMPORT_SUFFIXES:
+            filtered_items.append(path_str)
+        else:
+            skipped_items.append(path_str)
 
     for item in items:
         item_path = Path(item)
@@ -230,22 +292,45 @@ def _filter_import_items(items: tuple[str, ...]) -> tuple[str, ...]:
                 (path for path in item_path.rglob("*") if path.is_file()),
                 key=lambda path: path.as_posix(),
             ):
-                if child.suffix.lower() in _SKIPPED_IMPORT_SUFFIXES:
-                    skipped_items.append(str(child))
-                    continue
-                filtered_items.append(str(child))
+                _keep(str(child), child.suffix)
             continue
-
-        if item_path.suffix.lower() in _SKIPPED_IMPORT_SUFFIXES:
-            skipped_items.append(item)
-            continue
-        filtered_items.append(item)
+        _keep(item, item_path.suffix)
 
     if skipped_items:
-        logger.info("Skipping %d JPG/JPEG item(s) before Resolve import", len(skipped_items))
+        logger.info(
+            "Skipping %d non-media item(s) before Resolve import", len(skipped_items)
+        )
         logger.debug("Skipped import items: %s", skipped_items)
 
     return tuple(filtered_items)
+
+
+def _import_items_chunked(
+    context: _ResolveContext,
+    items: tuple[str, ...],
+    output: OutputFn,
+) -> list:
+    """Import *items* through AddItemListToMediaPool in fixed-size chunks."""
+    imported: list = []
+    total = len(items)
+    show_progress = total > _IMPORT_CHUNK_SIZE
+    for start in range(0, total, _IMPORT_CHUNK_SIZE):
+        chunk = list(items[start:start + _IMPORT_CHUNK_SIZE])
+        clips = context.media_storage.AddItemListToMediaPool(chunk)
+        if clips:
+            imported.extend(clips)
+        else:
+            # Distinguish "nothing imported" from "Resolve died mid-import"
+            _ensure_resolve_alive(context)
+            logger.warning(
+                "Import returned no clips for chunk of %d item(s) (%s .. %s)",
+                len(chunk),
+                chunk[0],
+                chunk[-1],
+            )
+        if show_progress:
+            output(f"    imported {min(start + _IMPORT_CHUNK_SIZE, total)}/{total}")
+    return imported
 
 
 def _add_render_job(
@@ -313,15 +398,20 @@ def _classify_clips(
     media_pool,
     bin_folder,
     imported_clips: list,
+    bin_cache: _BinCache,
 ) -> list[_ClipGroup]:
+    # First pass is pure classification: one GetClipProperty() round-trip per
+    # clip (the no-arg form returns all properties at once). Bin folders are
+    # resolved afterwards, once per group, instead of once per clip.
     # dict preserves insertion order (Python 3.7+); keys are (resolution, is_multi_audio)
-    groups: dict[tuple[str, bool], tuple[list[object], object]] = {}
+    groups: dict[tuple[str, bool], tuple[list[object], set[int]]] = {}
 
     for clip in imported_clips:
-        if clip.GetClipProperty("Type") == "Still":
+        properties = clip.GetClipProperty() or {}
+        if properties.get("Type") == "Still":
             logger.debug("Skipping still image clip during Resolve classification")
             continue
-        raw_resolution = clip.GetClipProperty("Resolution")
+        raw_resolution = properties.get("Resolution")
         resolution = _normalize_resolution(raw_resolution)
         if resolution is None:
             logger.warning(
@@ -329,9 +419,8 @@ def _classify_clips(
                 raw_resolution,
             )
             continue
-        res_bin = _get_or_create_subfolder(media_pool, bin_folder, resolution)
         try:
-            audio_tracks = int(clip.GetClipProperty("Audio Ch") or 0)
+            audio_tracks = int(properties.get("Audio Ch") or 0)
         except (ValueError, TypeError):
             audio_tracks = 0
         logger.debug("Clip classified as resolution=%s audio_tracks=%d", resolution, audio_tracks)
@@ -339,16 +428,18 @@ def _classify_clips(
         is_multi_audio = audio_tracks > 4
         key = (resolution, is_multi_audio)
         if key not in groups:
-            dest_bin = (
-                _get_or_create_subfolder(media_pool, res_bin, "MultiAudio_5+")
-                if is_multi_audio
-                else res_bin
-            )
-            groups[key] = ([], dest_bin)
+            groups[key] = ([], set())
         groups[key][0].append(clip)
+        groups[key][1].add(audio_tracks)
 
     clip_groups: list[_ClipGroup] = []
-    for (resolution, is_multi_audio), (clips, dest_bin) in groups.items():
+    for (resolution, is_multi_audio), (clips, channels) in groups.items():
+        res_bin = _get_or_create_subfolder(media_pool, bin_folder, resolution, bin_cache)
+        dest_bin = (
+            _get_or_create_subfolder(media_pool, res_bin, "MultiAudio_5+", bin_cache)
+            if is_multi_audio
+            else res_bin
+        )
         logger.debug(
             "Moving %d clip(s) into %r for resolution=%s multi_audio=%s",
             len(clips),
@@ -361,8 +452,8 @@ def _classify_clips(
             _ClipGroup(
                 resolution=resolution,
                 is_multi_audio=is_multi_audio,
+                audio_channels=tuple(sorted(channels)),
                 clips=tuple(clips),
-                dest_bin=dest_bin,
             )
         )
 
@@ -382,28 +473,36 @@ def _queue_render_jobs_for_bin(
     counter,
     output: OutputFn,
 ) -> None:
-    if clip_groups:
-        output_table(
-            "Render jobs:",
-            ("Resolution", "Audio", "Clips", "Target"),
-            [
-                (
-                    clip_group.resolution,
-                    _audio_group_label(clip_group.is_multi_audio),
-                    len(clip_group.clips),
-                    target_dir,
-                )
-                for clip_group in clip_groups
-            ],
-            output,
+    jobs = [
+        (
+            clip_group,
+            multi_audio_preset if clip_group.is_multi_audio else standard_preset,
         )
+        for clip_group in clip_groups
+    ]
+    if jobs:
+        output("  Render jobs:")
+        rows = [
+            (
+                clip_group.resolution,
+                "/".join(str(c) for c in clip_group.audio_channels) + "ch",
+                f"{len(clip_group.clips)} clips",
+                render_preset,
+            )
+            for clip_group, render_preset in jobs
+        ]
+        widths = [max(len(row[i]) for row in rows) for i in range(4)]
+        for row in rows:
+            output(
+                "    "
+                + row[0].ljust(widths[0])
+                + "  " + row[1].rjust(widths[1])
+                + "  " + row[2].rjust(widths[2])
+                + "  " + row[3].ljust(widths[3])
+                + "  ->  " + target_dir
+            )
 
-    for clip_group in clip_groups:
-        if clip_group.is_multi_audio:
-            render_preset = multi_audio_preset
-        else:
-            render_preset = standard_preset
-
+    for clip_group, render_preset in jobs:
         _add_render_job(
             project,
             media_pool,
@@ -430,7 +529,8 @@ def execute_resolve_plan(
     context = _connect_to_resolve(plan.project_prefix)
     standard_preset, multi_audio_preset = _resolve_render_presets(plan.codec)
     logger.info(
-        "Executing Resolve plan mode=%s project_prefix=%s footage_folders=%d codec=%s clean_image=%s",
+        "Executing Resolve plan mode=%s project_prefix=%s footage_folders=%d"
+        " codec=%s clean_image=%s",
         plan.mode_name,
         plan.project_prefix,
         len(plan.footage_folders),
@@ -439,20 +539,40 @@ def execute_resolve_plan(
     )
 
     if not plan.clean_image:
-        context.project.LoadBurnInPreset("burn-in")
-        logger.debug("Loaded burn-in preset")
+        if context.project.LoadBurnInPreset(_BURN_IN_PRESET):
+            logger.debug("Loaded burn-in preset %r", _BURN_IN_PRESET)
+        else:
+            logger.warning(
+                "Burn-in preset %r not found in Resolve; proxies will render"
+                " without burn-ins. Import it from presets/burn-in-vertical.xml.",
+                _BURN_IN_PRESET,
+            )
 
     counter = itertools.count(1)
+    bin_cache: _BinCache = {}
 
-    for footage_folder in plan.footage_folders:
-        output(f"\nProcessing footage folder: {footage_folder.footage_folder_name}")
+    total_folders = len(plan.footage_folders)
+    for folder_index, footage_folder in enumerate(plan.footage_folders, 1):
+        output(
+            f"\nProcessing {footage_folder.footage_folder_name}"
+            f" ({folder_index}/{total_folders})"
+        )
         logger.info("Processing footage folder %s", footage_folder.footage_folder_name)
+        _ensure_resolve_alive(context)
         main_bin = context.media_pool.AddSubFolder(
             context.root_folder, footage_folder.footage_folder_name
         )
+        if main_bin is None:
+            _ensure_resolve_alive(context)
+            raise ProxyGeneratorError(
+                f"Resolve failed to create media pool bin "
+                f"{footage_folder.footage_folder_name!r}."
+            )
 
         for batch in footage_folder.batches:
-            bin_folder = _build_bin_folder(context.media_pool, main_bin, batch.bin_parts)
+            bin_folder = _build_bin_folder(
+                context.media_pool, main_bin, batch.bin_parts, bin_cache
+            )
             try:
                 items_to_import = _filter_import_items(batch.items)
                 if not items_to_import:
@@ -462,7 +582,11 @@ def execute_resolve_plan(
                     )
                     continue
 
-                imported_clips = context.media_storage.AddItemListToMediaPool(list(items_to_import))
+                output(
+                    f"  Importing {len(items_to_import)} item(s) into Resolve"
+                    " (may take a while)..."
+                )
+                imported_clips = _import_items_chunked(context, items_to_import, output)
                 if not imported_clips:
                     logger.warning(
                         "Failed to import items from %s",
@@ -486,6 +610,7 @@ def execute_resolve_plan(
                     context.media_pool,
                     bin_folder,
                     imported_clips,
+                    bin_cache,
                 )
                 _queue_render_jobs_for_bin(
                     context.project,
@@ -497,16 +622,32 @@ def execute_resolve_plan(
                     counter,
                     output,
                 )
+            except ProxyGeneratorError:
+                raise
             except Exception as exc:
                 logger.error("Error processing items: %s", exc)
+                # A dead Resolve surfaces as arbitrary exceptions on remote
+                # calls; abort instead of failing every remaining batch.
+                _ensure_resolve_alive(context)
                 continue
 
-    context.project_manager.SaveProject()
+        # Save after each folder so queued jobs survive a later Resolve crash
+        context.project_manager.SaveProject()
+        logger.debug(
+            "Saved Resolve project after folder %s", footage_folder.footage_folder_name
+        )
+
     logger.info("Saved Resolve project")
     should_start_render = confirm_render or (
-        lambda: presenter.confirm("\nAll render jobs added. Start rendering now? (y/n)")
+        lambda: presenter.confirm("\nAll render jobs added. Start rendering now? (y/n/q)")
     )
-    if should_start_render():
+    try:
+        start_render = should_start_render()
+    except UserAbort:
+        raise UserAbort(
+            "Aborted — render jobs remain queued in the saved Resolve project."
+        ) from None
+    if start_render:
         context.project.StartRendering()
         logger.info("Started Resolve rendering")
         output("Rendering started.")

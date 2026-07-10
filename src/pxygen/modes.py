@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,9 +22,8 @@ from .organize import (
 )
 from .paths import format_path_parts, path_parts
 from .plan import build_resolve_execution_plan
-from .presenter import InputFn, OutputFn
+from .presenter import InputFn, OutputFn, output_kv, output_numbered, prompt_line
 from .resolve import ProxyGeneratorError, execute_resolve_plan
-from .table_output import output_table
 
 logger = logging.getLogger(__name__)
 
@@ -79,29 +79,36 @@ def _normalize_depth(root_depth: int, depth: int) -> _DepthSpec:
     return _DepthSpec(requested=depth, resolved=resolved)
 
 
-def _print_folder_options(options, in_depth: int, output: OutputFn) -> None:
-    rows = [
-        (index, option.label, option.item_count)
-        for index, option in enumerate(options, 1)
+def _folder_labels(paths: list[str]) -> list[str]:
+    """Return the distinguishing display label for each folder path.
+
+    Leaf names are enough when they are unique; fall back to full paths
+    when two folders share a name.
+    """
+    names = [Path(path).name for path in paths]
+    if len(set(names)) != len(names):
+        return list(paths)
+    return names
+
+
+def _print_folder_options(options, output: OutputFn) -> None:
+    labels = _folder_labels([option.full_path for option in options])
+    items = [
+        f"{label}  ({option.item_count} items)"
+        for label, option in zip(labels, options)
     ]
-    output_table(
-        f"Folders at depth {in_depth}:",
-        ("#", "Folder", "Items"),
-        rows,
-        output,
-    )
-    output("\nSelect folders to process (numbers, range like 2-4, or 'all'):")
+    output_numbered(f"Folders ({len(options)}):", items, output)
+    output("\nNumbers like '1 3 8', range like 2-4, 'all', or 'q' to quit")
 
 
 def _read_selection_indices(
     options,
-    in_depth: int,
     *,
     input_func: InputFn,
     output: OutputFn,
 ) -> list[int] | None:
-    _print_folder_options(options, in_depth, output)
-    choice = input_func().strip()
+    _print_folder_options(options, output)
+    choice = prompt_line(input_func)
     if choice.lower() == "all":
         return None
     return parse_selection(choice, len(options))
@@ -140,13 +147,6 @@ def _collect_directories_at_depth(root: Path, target_depth: int) -> list[Path]:
             for child in reversed(_iter_child_directories(current))
         )
     return matches
-
-
-def list_footage_folders(footage_path: str, depth: int) -> list[str]:
-    """Return folders at *depth* levels below *footage_path*."""
-    root_depth = len(path_parts(footage_path))
-    resolved_depth = _normalize_depth(root_depth, depth).resolved
-    return [str(p) for p in _collect_directories_at_depth(Path(footage_path), resolved_depth)]
 
 
 def _collect_directory_tree(root: Path) -> list[Path]:
@@ -238,14 +238,12 @@ def process_json_mode(
     if out_depth_spec.resolved < in_depth_spec.resolved:
         raise ValueError("Output depth must be ≥ input depth")
 
-    output(f"Found {len(file_list)} files in group{dataset}")
     logger.info("Found %d file(s) in group%d", len(file_list), dataset)
-    summary_rows: list[tuple[object, ...]] = [
-        ("JSON file", json_path),
-        ("Dataset", f"group{dataset}"),
-        ("Input depth", str(in_depth_spec.requested)),
-        ("Output depth", str(out_depth_spec.requested)),
-        ("File count", len(file_list)),
+    summary_rows: list[tuple[str, object]] = [
+        ("json file", json_path),
+        ("dataset", f"group{dataset}"),
+        ("depths", f"in {in_depth_spec.requested} / out {out_depth_spec.requested}"),
+        ("files", len(file_list)),
     ]
     if file_list:
         example = file_list[0]
@@ -254,17 +252,17 @@ def process_json_mode(
             if in_depth_spec.resolved == out_depth_spec.resolved:
                 summary_rows.extend(
                     [
-                        ("Example", example),
-                        ("Folder name", parts[in_depth_spec.resolved - 1]),
+                        ("example", example),
+                        ("folder name", parts[in_depth_spec.resolved - 1]),
                     ]
                 )
             else:
                 fragment_parts = parts[in_depth_spec.resolved - 1:out_depth_spec.resolved]
                 summary_rows.extend(
                     [
-                        ("Example", example),
+                        ("example", example),
                         (
-                            "Key fragment",
+                            "key fragment",
                             format_path_parts(
                                 fragment_parts,
                                 windows=":" in example[:3] or "\\" in example,
@@ -272,14 +270,14 @@ def process_json_mode(
                         ),
                     ]
                 )
-    output_table("JSON mode:", ("Parameter", "Value"), summary_rows, output)
+    output_kv("JSON mode", summary_rows, output)
 
     organized = organize_json_mode_files(file_list, in_depth_spec.resolved, out_depth_spec.resolved)
     logger.debug("JSON mode produced %d top-level folder group(s)", len(organized))
     if filter_mode == "select":
-        options = describe_folders_at_in_depth(organized, show_full_path=True)
+        options = describe_folders_at_in_depth(organized)
         selected_indices = _read_selection_indices(
-            options, in_depth, input_func=input_func, output=output
+            options, input_func=input_func, output=output
         )
         if selected_indices is not None:
             logger.debug("JSON mode selected folder indices: %s", selected_indices)
@@ -378,15 +376,13 @@ def process_directory_mode(
             f"No folders found at depth {in_depth} inside '{footage_path}'"
         )
 
-    output_table(
-        "Directory mode:",
-        ("Parameter", "Value"),
+    output_kv(
+        "Directory mode",
         [
-            ("Footage", f"{footage_path} (depth: {footage_depth})"),
-            ("Proxy output", proxy_path),
-            ("Input depth", str(in_depth_spec.requested)),
-            ("Output depth", str(out_depth_spec.requested)),
-            ("Found folders", len(input_depth_folders)),
+            ("footage", f"{footage_path} (depth {footage_depth})"),
+            ("proxy", proxy_path),
+            ("depths", f"in {in_depth_spec.requested} / out {out_depth_spec.requested}"),
+            ("folders", len(input_depth_folders)),
         ],
         output,
     )
@@ -431,17 +427,11 @@ def process_directory_mode(
     # --- Selection / filtering at the input-depth level ---
     if filter_mode == "select":
         folder_paths = sorted(targets_by_input)
-        output_table(
-            f"Folders at depth {in_depth}:",
-            ("#", "Folder"),
-            [
-                (index, folder_path)
-                for index, folder_path in enumerate(folder_paths, 1)
-            ],
-            output,
+        output_numbered(
+            f"Folders ({len(folder_paths)}):", _folder_labels(folder_paths), output
         )
-        output("\nSelect folders to process (numbers, range like 2-4, or 'all'):")
-        choice = input_func().strip()
+        output("\nNumbers like '1 3 8', range like 2-4, 'all', or 'q' to quit")
+        choice = prompt_line(input_func)
         if choice.lower() == "all":
             selected_indices = None
         else:

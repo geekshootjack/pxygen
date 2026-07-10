@@ -27,11 +27,17 @@ class TestParseSelection:
     def test_full_range(self):
         assert parse_selection("1-3", 3) == [0, 1, 2]
 
-    def test_comma_separated(self):
+    def test_space_separated(self):
+        assert parse_selection("1 3 5", 5) == [0, 2, 4]
+
+    def test_comma_separated_still_accepted(self):
         assert parse_selection("1,3,5", 5) == [0, 2, 4]
 
     def test_mixed_range_and_single(self):
-        assert parse_selection("1,3,5-7", 10) == [0, 2, 4, 5, 6]
+        assert parse_selection("1 3 5-7", 10) == [0, 2, 4, 5, 6]
+
+    def test_mixed_spaces_and_commas(self):
+        assert parse_selection("1, 3 5-7", 10) == [0, 2, 4, 5, 6]
 
     def test_duplicates_removed(self):
         assert parse_selection("1,1,2", 5) == [0, 1]
@@ -194,13 +200,14 @@ class TestFilterFoldersAtInDepth:
         result = filter_folders_at_in_depth(self.ORGANIZED, None)
         assert result == self.ORGANIZED
 
-    def test_describe_folders_at_in_depth_uses_folder_name_labels_by_default(self):
+    def test_describe_folders_at_in_depth_returns_sorted_paths_with_counts(self):
         options = describe_folders_at_in_depth(self.ORGANIZED)
-        assert [option.label for option in options] == ["Day1", "Day2", "Day3"]
-
-    def test_describe_folders_at_in_depth_can_use_full_paths(self):
-        options = describe_folders_at_in_depth(self.ORGANIZED, show_full_path=True)
-        assert options[0].label == "/Volumes/SSD/Footage/Day1"
+        assert [option.full_path for option in options] == [
+            "/Volumes/SSD/Footage/Day1",
+            "/Volumes/SSD/Footage/Day2",
+            "/Volumes/SSD/Footage/Day3",
+        ]
+        assert all(option.item_count >= 1 for option in options)
 
     def test_select_folders_at_in_depth_single_index(self):
         sorted_keys = sorted(self.ORGANIZED.keys())

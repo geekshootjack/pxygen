@@ -12,19 +12,18 @@ class FolderOption:
     """Display metadata for a selectable top-level folder."""
 
     full_path: str
-    label: str
     item_count: int
 
 
 def parse_selection(choice: str, max_num: int) -> list[int]:
-    """Parse a selection string such as '1,3,5-7' into sorted 0-based indices.
+    """Parse a selection string such as '1 3 5-7' into sorted 0-based indices.
 
+    Tokens are separated by whitespace (commas also tolerated); ranges use '-'.
     Numbers outside [1, max_num] are silently ignored.
     Invalid tokens are silently ignored.
     """
     indices: set[int] = set()
-    for token in choice.split(","):
-        token = token.strip()
+    for token in choice.replace(",", " ").split():
         if "-" in token:
             try:
                 start_s, end_s = token.split("-", 1)
@@ -93,16 +92,15 @@ def organize_directory_mode_folders(
 
 def describe_folders_at_in_depth(
     organized_files: dict[str, dict[str, list[str]]],
-    *,
-    show_full_path: bool = False,
 ) -> list[FolderOption]:
     """Return display-friendly folder options without performing any I/O."""
-    options: list[FolderOption] = []
-    for full_path in sorted(organized_files):
-        item_count = sum(len(v) for v in organized_files[full_path].values())
-        label = full_path if show_full_path else Path(full_path).name
-        options.append(FolderOption(full_path=full_path, label=label, item_count=item_count))
-    return options
+    return [
+        FolderOption(
+            full_path=full_path,
+            item_count=sum(len(v) for v in organized_files[full_path].values()),
+        )
+        for full_path in sorted(organized_files)
+    ]
 
 
 def select_folders_at_in_depth(

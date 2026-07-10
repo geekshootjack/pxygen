@@ -1,15 +1,48 @@
-"""Console presentation helpers for user-facing terminal output."""
+"""Console presentation helpers for user-facing terminal output.
+
+All output is plain text built with f-string alignment — no terminal UI
+dependency. CJK-safe because wide characters only ever appear in trailing
+columns (paths and folder names).
+"""
 from __future__ import annotations
 
 from collections.abc import Callable
 
-from .table_output import OutputFn, output_table
+OutputFn = Callable[[str], None]
+# Receives the prompt string to display inline (like builtins.input)
+InputFn = Callable[[str], str]
 
-InputFn = Callable[[], str]
+
+class UserAbort(Exception):
+    """Raised when the user enters 'q' at an interactive prompt."""
+
+
+def prompt_line(input_func: InputFn, prompt: str = "> ") -> str:
+    """Read one line of input; 'q' triggers a gentle program exit."""
+    value = input_func(prompt).strip()
+    if value.lower() == "q":
+        raise UserAbort
+    return value
+
+
+def output_kv(title: str, pairs: list[tuple[str, object]], output: OutputFn) -> None:
+    """Print a titled block of aligned key-value lines."""
+    output(f"\n{title}")
+    width = max(len(key) for key, _ in pairs)
+    for key, value in pairs:
+        output(f"  {key.ljust(width)}  {value}")
+
+
+def output_numbered(title: str, items: list[str], output: OutputFn) -> None:
+    """Print a titled, numbered list (1-based)."""
+    output(f"\n{title}")
+    width = len(str(len(items)))
+    for index, item in enumerate(items, 1):
+        output(f"  {str(index).rjust(width)}  {item}")
 
 
 class ConsolePresenter:
-    """Render user-facing text and tables without routing through logging."""
+    """Render user-facing text without routing through logging."""
 
     def __init__(
         self,
@@ -23,17 +56,9 @@ class ConsolePresenter:
     def show(self, message: str) -> None:
         self._output(message)
 
-    def show_table(
-        self,
-        title: str,
-        headers: tuple[str, ...],
-        rows: list[tuple[object, ...]],
-    ) -> None:
-        output_table(title, headers, rows, self.show)
-
-    def read_line(self) -> str:
-        return self._input()
+    def read_line(self, prompt: str = "> ") -> str:
+        return self._input(prompt)
 
     def confirm(self, prompt: str) -> bool:
         self.show(prompt)
-        return self.read_line().strip().lower() == "y"
+        return prompt_line(self._input).lower() == "y"

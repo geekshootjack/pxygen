@@ -4,11 +4,14 @@ from __future__ import annotations
 import logging
 import sys
 import types
-from pathlib import PurePosixPath
+from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from pxygen.plan import build_resolve_execution_plan
-from pxygen.resolve import execute_resolve_plan
+from pxygen.presenter import UserAbort
+from pxygen.resolve import ProxyGeneratorError, execute_resolve_plan
 
 
 def _process(
@@ -42,7 +45,9 @@ class FakeClip:
             "Type": clip_type,
         }
 
-    def GetClipProperty(self, name: str):
+    def GetClipProperty(self, name: str | None = None):
+        if name is None:
+            return dict(self._properties)
         return self._properties.get(name)
 
 
@@ -156,11 +161,15 @@ class FakeProject:
         self.started_rendering = False
         self.current_timeline = None
 
+    def GetName(self):
+        return "fake-project"
+
     def GetMediaPool(self):
         return self.media_pool
 
     def LoadBurnInPreset(self, preset_name: str):
         self.loaded_burn_in_presets.append(preset_name)
+        return True
 
     def LoadRenderPreset(self, preset_name: str):
         self.loaded_render_presets.append(preset_name)
@@ -225,17 +234,17 @@ def _install_fake_resolve(monkeypatch, imports):
 
 class TestProcessFilesInResolve:
     def test_auto_codec_uses_h265_for_standard_and_prores_for_multi_audio(self, monkeypatch):
-        items = ["/source/clip1.mov", "/source/clip2.mov", "/source/still.dpx"]
+        # still.xml is filtered out before import (non-media allowlist)
+        items = ["/source/clip1.mov", "/source/clip2.mov", "/source/sidecar.xml"]
         imports = {
-            tuple(items): [
+            ("/source/clip1.mov", "/source/clip2.mov"): [
                 FakeClip("3840x2160", "2"),
                 FakeClip("3840x2160", "8"),
-                FakeClip("3840x2160", None, clip_type="Still"),
             ]
         }
         project_manager, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
-        monkeypatch.setattr("builtins.input", lambda: "n")
+        monkeypatch.setattr("builtins.input", lambda *_: "n")
         _process(
             {"/footage/Day1": {"CamA": items}},
             ["/footage/Day1"],
@@ -247,7 +256,7 @@ class TestProcessFilesInResolve:
 
         assert project_manager.saved is True
         assert project.started_rendering is False
-        assert project.loaded_burn_in_presets == ["burn-in"]
+        assert project.loaded_burn_in_presets == ["burn-in-vertical"]
         assert project.loaded_render_presets == [
             "fhd-h265-5mbps",
             "fhd-prores-proxy",
@@ -286,7 +295,7 @@ class TestProcessFilesInResolve:
         project_manager, project, media_pool = _install_fake_resolve(monkeypatch, imports)
         media_storage = sys.modules["DaVinciResolveScript"].scriptapp("Resolve").GetMediaStorage()
 
-        monkeypatch.setattr("builtins.input", lambda: "n")
+        monkeypatch.setattr("builtins.input", lambda *_: "n")
         _process(
             {"/footage/Day1": {"CamA": items}},
             ["/footage/Day1"],
@@ -325,7 +334,7 @@ class TestProcessFilesInResolve:
         project_manager, project, media_pool = _install_fake_resolve(monkeypatch, imports)
         media_storage = sys.modules["DaVinciResolveScript"].scriptapp("Resolve").GetMediaStorage()
 
-        monkeypatch.setattr("builtins.input", lambda: "n")
+        monkeypatch.setattr("builtins.input", lambda *_: "n")
         _process(
             {"/footage/Day1": {"CamA": [str(source_dir)]}},
             ["/footage/Day1"],
@@ -345,7 +354,7 @@ class TestProcessFilesInResolve:
         imports = {tuple(items): [FakeClip("1920x1080", "2")]}
         project_manager, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
-        monkeypatch.setattr("builtins.input", lambda: "y")
+        monkeypatch.setattr("builtins.input", lambda *_: "y")
         _process(
             {"/footage/Day1": {"": items}},
             ["/footage/Day1"],
@@ -374,7 +383,7 @@ class TestProcessFilesInResolve:
         }
         _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
-        monkeypatch.setattr("builtins.input", lambda: "n")
+        monkeypatch.setattr("builtins.input", lambda *_: "n")
         _process(
             {"/footage/Day1": {"CamA": items}},
             ["/footage/Day1"],
@@ -394,7 +403,7 @@ class TestProcessFilesInResolve:
             "0002-1920x1080",
         ]
         assert all(
-            settings["TargetDir"] == PurePosixPath("/proxy", "Day1", "CamA").as_posix()
+            settings["TargetDir"] == str(Path("/proxy", "Day1", "CamA"))
             for settings in project.render_settings
         )
 
@@ -409,7 +418,7 @@ class TestProcessFilesInResolve:
         }
         _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
-        monkeypatch.setattr("builtins.input", lambda: "n")
+        monkeypatch.setattr("builtins.input", lambda *_: "n")
         _process(
             {"/footage/Day1": {"CamA": items}},
             ["/footage/Day1"],
@@ -451,16 +460,17 @@ class TestProcessFilesInResolve:
         )
 
         output_text = "\n".join(output_lines)
+        assert "Processing Day1 (1/1)" in output_text
         assert "Render jobs:" in output_text
-        assert "Resolution" in output_text
-        assert "Audio" in output_text
-        assert "Clips" in output_text
-        assert "Target" in output_text
         assert "4096x2160" in output_text
-        assert "multi-audio" in output_text
-        assert "standard" in output_text
-        assert "Render target (standard audio):" not in output_text
-        assert "Render target (multi-audio):" not in output_text
+        # actual channel counts, not standard/multi-audio labels
+        assert "2ch" in output_text
+        assert "8ch" in output_text
+        assert "standard" not in output_text
+        # the preset chosen per audio group and the target are shown inline
+        assert "fhd-h265-5mbps" in output_text
+        assert "fhd-prores-proxy" in output_text
+        assert "->" in output_text
         assert project.render_job_count == 2
 
     def test_queues_each_render_job_on_its_created_timeline(self, monkeypatch):
@@ -473,7 +483,7 @@ class TestProcessFilesInResolve:
         }
         _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
-        monkeypatch.setattr("builtins.input", lambda: "n")
+        monkeypatch.setattr("builtins.input", lambda *_: "n")
         _process(
             {"/footage/Day1": {"CamA": items}},
             ["/footage/Day1"],
@@ -518,7 +528,7 @@ class TestProcessFilesInResolve:
         }
         _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
 
-        monkeypatch.setattr("builtins.input", lambda: "n")
+        monkeypatch.setattr("builtins.input", lambda *_: "n")
         with caplog.at_level(logging.WARNING):
             _process(
                 {"/footage/Day1": {"CamA": items}},
@@ -533,6 +543,95 @@ class TestProcessFilesInResolve:
         assert project.render_job_count == 1
         assert [timeline.name for timeline in media_pool.timelines] == ["0001-1920x1080"]
         assert all(timeline.name != "0001-" for timeline in media_pool.timelines)
+
+    def test_imports_items_in_chunks(self, monkeypatch):
+        items = ["/source/a.mov", "/source/b.mov", "/source/c.mov"]
+        imports = {
+            ("/source/a.mov", "/source/b.mov"): [
+                FakeClip("3840x2160", "2"),
+                FakeClip("3840x2160", "2"),
+            ],
+            ("/source/c.mov",): [FakeClip("3840x2160", "2")],
+        }
+        _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
+        monkeypatch.setattr("pxygen.resolve._IMPORT_CHUNK_SIZE", 2)
+        output_lines: list[str] = []
+
+        _process(
+            {"/footage/Day1": {"CamA": items}},
+            ["/footage/Day1"],
+            "/proxy",
+            1,
+            is_directory_mode=True,
+            output=output_lines.append,
+            confirm_render=lambda: False,
+        )
+
+        # both chunks imported and merged into one render job
+        assert project.render_job_count == 1
+        assert len(media_pool.timelines[0].clips) == 3
+        output_text = "\n".join(output_lines)
+        assert "imported 2/3" in output_text
+        assert "imported 3/3" in output_text
+
+    def test_q_at_render_confirm_aborts_after_saving(self, monkeypatch):
+        items = ["/source/a.mov"]
+        imports = {tuple(items): [FakeClip("3840x2160", "2")]}
+        project_manager, project, _ = _install_fake_resolve(monkeypatch, imports)
+
+        monkeypatch.setattr("builtins.input", lambda *_: "q")
+        with pytest.raises(UserAbort, match="remain queued"):
+            _process(
+                {"/footage/Day1": {"CamA": items}},
+                ["/footage/Day1"],
+                "/proxy",
+                1,
+                is_directory_mode=True,
+            )
+
+        assert project_manager.saved is True
+        assert project.started_rendering is False
+
+    def test_aborts_with_clear_error_when_resolve_connection_dies(self, monkeypatch):
+        items = ["/source/a.mov"]
+        imports = {tuple(items): [FakeClip("3840x2160", "2")]}
+        _, project, _ = _install_fake_resolve(monkeypatch, imports)
+        # Simulate a crashed Resolve: remote attribute lookups return None
+        project.GetName = lambda: None
+
+        with pytest.raises(ProxyGeneratorError, match="Lost connection"):
+            _process(
+                {"/footage/Day1": {"CamA": items}},
+                ["/footage/Day1"],
+                "/proxy",
+                1,
+                is_directory_mode=True,
+                confirm_render=lambda: False,
+            )
+
+    def test_saves_project_after_each_footage_folder(self, monkeypatch):
+        items_a = ["/source/a.mov"]
+        items_b = ["/source/b.mov"]
+        imports = {
+            tuple(items_a): [FakeClip("3840x2160", "2")],
+            tuple(items_b): [FakeClip("1920x1080", "2")],
+        }
+        project_manager, _, _ = _install_fake_resolve(monkeypatch, imports)
+        save_counts: list[bool] = []
+        original_save = project_manager.SaveProject
+        project_manager.SaveProject = lambda: (save_counts.append(True), original_save())[1]
+
+        _process(
+            {"/footage/Day1": {"CamA": items_a}, "/footage/Day2": {"CamB": items_b}},
+            ["/footage/Day1", "/footage/Day2"],
+            "/proxy",
+            1,
+            is_directory_mode=True,
+            confirm_render=lambda: False,
+        )
+
+        # one save per folder — queued jobs survive a later crash
+        assert len(save_counts) == 2
 
     def test_defaults_to_console_output_instead_of_logger_info(self, monkeypatch):
         items = ["/source/a.mov"]

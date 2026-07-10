@@ -68,14 +68,17 @@ So `-n 1 -d 2` means: group by Day, include camera reels as subfolders.
 **Interactive selection example:**
 
 ```
-Folders at depth 4:
-  1. /Volumes/SSD/Footage/Shooting_Day_1
-  2. /Volumes/SSD/Footage/Shooting_Day_2
-  3. /Volumes/SSD/Footage/Shooting_Day_3
+Folders (3):
+  1  Shooting_Day_1
+  2  Shooting_Day_2
+  3  Shooting_Day_3
 
-Select folders to process (numbers, range like 2-4, or 'all'):
-> 1,3
+Numbers like '1 3 8', range like 2-4, 'all', or 'q' to quit
+> 1 3
 ```
+
+Entering `q` at any prompt exits gently. At the final render confirmation,
+already-queued jobs stay in the saved Resolve project.
 
 ### JSON Mode Options
 
@@ -131,9 +134,9 @@ Preset files are included in the `presets/` directory:
 
 | Preset name | File | Used for |
 |-------------|------|----------|
-| `fhd-h265-5mbps.xml` | `presets/fhd-h265-5mbps.xml.xml` | Standard proxy render |
-| `fhd-prores-proxy.xml` | `presets/fhd-prores-proxy.xml.xml` | Multi-audio proxy render |
-| `burn-in` | `presets/burn-in.xml` | Timecode + clip name overlay |
+| `fhd-h265-5mbps` | `presets/fhd-h265-5mbps.xml` | Standard proxy render |
+| `fhd-prores-proxy` | `presets/fhd-prores-proxy.xml` | Multi-audio proxy render |
+| `burn-in-vertical` | `presets/burn-in-vertical.xml` | Clip name + timecode overlay, centered — fits landscape and portrait |
 
 To import: **DaVinci Resolve → Deliver → Render Settings → ⋯ → Import Preset**.
 
@@ -146,17 +149,3 @@ The project is saved automatically before rendering starts. If Resolve crashes m
 1. Reopen DaVinci Resolve.
 2. Open the `proxy_YYYYMMDD_HHMMSS` project that was created.
 3. Go to **Deliver** and restart the render queue.
-
----
-
-## Legacy Positional Arguments
-
-The original positional syntax is still supported for backward compatibility:
-
-```sh
-# Directory mode (positional)
-pxygen /path/to/footage /path/to/proxy
-
-# JSON mode (positional)
-pxygen comparison.json /path/to/proxy
-```

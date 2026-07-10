@@ -21,7 +21,6 @@ class PlannedBatch:
 class PlannedFootageFolder:
     """All batches associated with one top-level footage folder."""
 
-    footage_folder_path: str
     footage_folder_name: str
     batches: tuple[PlannedBatch, ...]
 
@@ -32,7 +31,6 @@ class ResolveExecutionPlan:
 
     mode_name: str
     project_prefix: str
-    proxy_folder_path: str
     clean_image: bool
     codec: str
     footage_folders: tuple[PlannedFootageFolder, ...]
@@ -71,7 +69,6 @@ def build_resolve_execution_plan(
 
         footage_folders.append(
             PlannedFootageFolder(
-                footage_folder_path=footage_folder_path,
                 footage_folder_name=footage_folder_name,
                 batches=tuple(batches),
             )
@@ -80,7 +77,6 @@ def build_resolve_execution_plan(
     return ResolveExecutionPlan(
         mode_name=mode_name,
         project_prefix=project_prefix,
-        proxy_folder_path=proxy_folder_path,
         clean_image=clean_image,
         codec=codec,
         footage_folders=tuple(footage_folders),

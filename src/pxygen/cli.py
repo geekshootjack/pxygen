@@ -1,20 +1,38 @@
 """Command-line interface entry point.
 
 Parses arguments and dispatches to :mod:`pxygen.modes`.
-Supports both named flags and the legacy positional-argument syntax.
 """
 from __future__ import annotations
 
 import logging
 import sys
+from pathlib import Path
 
-from .logging_utils import configure_logging
+from . import __version__
 from .modes import process_directory_mode, process_json_mode
 from .paths import clean_path_input, is_json_file
-from .presenter import ConsolePresenter
+from .presenter import ConsolePresenter, UserAbort
 from .resolve import ProxyGeneratorError
 
 logger = logging.getLogger(__name__)
+
+
+def configure_logging(log_level: str = "warning", log_file: str | None = None) -> None:
+    """Configure application logging with a standard detailed format."""
+    level = getattr(logging, log_level.upper())
+    handlers: list[logging.Handler] = [logging.StreamHandler()]
+    if log_file:
+        log_path = Path(log_file)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        handlers.append(logging.FileHandler(log_path, encoding="utf-8"))
+
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=handlers,
+        force=True,
+    )
 
 
 def _build_parser():
@@ -31,7 +49,7 @@ def _build_parser():
     parser = argparse.ArgumentParser(
         prog="pxygen",
         description=(
-            "pxygen v1.5.2\n\n"
+            f"pxygen v{__version__}\n\n"
             "Pass a footage folder or a JSON comparison file to --input;\n"
             "the mode is detected automatically."
         ),
@@ -42,7 +60,6 @@ def _build_parser():
             "  pxygen -i comparison.json -o /Volumes/SSD/Proxy --group 2\n"
             "  pxygen -i /Volumes/SSD/Footage -o /Proxy --select\n"
             '  pxygen -i /Volumes/SSD/Footage -o /Proxy --filter "Day1,Day2"\n'
-            "\nLegacy alias still works: proxy-generator"
         ),
     )
 
@@ -94,17 +111,6 @@ def _build_parser():
         "--log-file",
         help="Optional file path for detailed runtime logs",
     )
-    parser.add_argument(
-        "--web", action="store_true",
-        help="Launch the WebUI in a browser (no -i/-o required)",
-    )
-    parser.add_argument(
-        "--port", type=int, default=8321,
-        help="Port for the WebUI server",
-    )
-
-    # Legacy positional arguments kept for backward compatibility
-    parser.add_argument("args", nargs="*", help=argparse.SUPPRESS)
 
     return parser
 
@@ -114,11 +120,6 @@ def main() -> None:
     args = parser.parse_args()
     configure_logging(args.log_level, args.log_file)
     presenter = ConsolePresenter()
-
-    if args.web:
-        from .server import launch_server
-        launch_server(args.port)
-        return
 
     filter_mode = "select" if args.select else ("filter" if args.filter else None)
     filter_list = args.filter if filter_mode == "filter" else None
@@ -136,50 +137,29 @@ def main() -> None:
     )
 
     try:
-        if args.input:
-            if not args.output:
-                parser.error("requires -o/--output")
-            input_path = clean_path_input(args.input)
-            output_path = clean_path_input(args.output)
-            if is_json_file(input_path):
-                process_json_mode(
-                    input_path, output_path,
-                    args.group, args.in_depth, args.out_depth,
-                    **shared,
-                )
-            else:
-                process_directory_mode(
-                    input_path, output_path,
-                    args.in_depth, args.out_depth,
-                    **shared,
-                )
-
-        elif len(args.args) >= 2:
-            # Legacy positional: <footage_or_json> <proxy>
-            first = clean_path_input(args.args[0])
-            output_path = clean_path_input(args.args[1])
-            if is_json_file(first):
-                process_json_mode(
-                    first,
-                    output_path,
-                    args.group,
-                    args.in_depth,
-                    args.out_depth,
-                    **shared,
-                )
-            else:
-                process_directory_mode(
-                    first,
-                    output_path,
-                    args.in_depth,
-                    args.out_depth,
-                    **shared,
-                )
-
-        else:
+        if not args.input:
             parser.print_help()
             sys.exit(1)
+        if not args.output:
+            parser.error("requires -o/--output")
+        input_path = clean_path_input(args.input)
+        output_path = clean_path_input(args.output)
+        if is_json_file(input_path):
+            process_json_mode(
+                input_path, output_path,
+                args.group, args.in_depth, args.out_depth,
+                **shared,
+            )
+        else:
+            process_directory_mode(
+                input_path, output_path,
+                args.in_depth, args.out_depth,
+                **shared,
+            )
 
+    except UserAbort as exc:
+        presenter.show(str(exc) or "Aborted.")
+        sys.exit(0)
     except ProxyGeneratorError as exc:
         logger.error("%s", exc)
         sys.exit(1)

@@ -6,8 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from pxygen.cli import _build_parser, main
-from pxygen.logging_utils import configure_logging
+from pxygen.cli import _build_parser, configure_logging, main
 
 # ---------------------------------------------------------------------------
 # _build_parser — flag parsing
@@ -90,7 +89,7 @@ class TestParser:
 
 class TestLoggingConfig:
     def test_configure_logging_uses_standard_structured_format(self):
-        with patch("pxygen.logging_utils.logging.basicConfig") as mock_basic_config:
+        with patch("pxygen.cli.logging.basicConfig") as mock_basic_config:
             configure_logging("debug")
 
         kwargs = mock_basic_config.call_args.kwargs
@@ -104,7 +103,7 @@ class TestLoggingConfig:
 
     def test_configure_logging_adds_file_handler_when_requested(self, tmp_path):
         log_path = tmp_path / "logs" / "run.log"
-        with patch("pxygen.logging_utils.logging.basicConfig") as mock_basic_config:
+        with patch("pxygen.cli.logging.basicConfig") as mock_basic_config:
             configure_logging("info", str(log_path))
 
         kwargs = mock_basic_config.call_args.kwargs
@@ -214,21 +213,6 @@ class TestDispatch:
             self._run(["-i", str(footage), "-o", "/proxy", "-c"])
             _, kwargs = mock_dir.call_args
             assert kwargs["clean_image"] is True
-
-    def test_legacy_positional_directory(self, tmp_path):
-        footage = tmp_path / "footage"
-        footage.mkdir()
-        with patch(_MOCK_DIR) as mock_dir, patch(_MOCK_JSON) as mock_json:
-            self._run([str(footage), "/proxy"])
-            mock_dir.assert_called_once()
-            mock_json.assert_not_called()
-
-    def test_legacy_positional_json(self):
-        json_path = "/nonexistent/comp.json"
-        with patch(_MOCK_DIR) as mock_dir, patch(_MOCK_JSON) as mock_json:
-            self._run([json_path, "/proxy"])
-            mock_json.assert_called_once()
-            mock_dir.assert_not_called()
 
     def test_attribute_error_logged(self, caplog):
         with patch("sys.argv", ["pxygen", "-i", "/tmp/a.json", "-o", "/proxy"]), patch(

@@ -2,7 +2,7 @@
 
 **Automated proxy generation for DaVinci Resolve.**
 
-[![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![中文](https://img.shields.io/badge/文档-中文-red)](README.zh.md)
 
@@ -18,91 +18,55 @@ pxygen imports your footage into DaVinci Resolve, organises it into bins that mi
 
 ## Requirements
 
-- Python ≥ 3.9, **64-bit**
+- Python ≥ 3.10, **64-bit**, official python.org build (Resolve's scripting binding does not work with uv-managed Python)
 - DaVinci Resolve ≥ 19.1.4 (must be running)
 - Resolve render presets: `fhd-h265-5mbps`, `fhd-prores-proxy`
-- Resolve burn-in preset: `burn-in`
+- Resolve burn-in preset: `burn-in-vertical` (centered layout, fits landscape and portrait)
 
 ## Environment Setup
 
-For standard Resolve installs, pxygen detects the scripting environment automatically — no manual setup needed.
+None needed for standard Resolve installs — pxygen probes the well-known
+scripting locations on macOS (standard and App Store Studio), Windows, and
+Linux, and configures `sys.path` and DLL lookup by itself.
 
-If auto-detection fails (non-standard install path), set these variables manually before running pxygen:
-
-<details>
-<summary>macOS (standard install) — bash/zsh</summary>
-
-```sh
-export RESOLVE_SCRIPT_API="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting"
-export RESOLVE_SCRIPT_LIB="/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Libraries/Fusion/fusionscript.so"
-export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
-```
-</details>
-
-<details>
-<summary>macOS (App Store install) — bash/zsh</summary>
+Only if Resolve lives at a non-standard path, point pxygen at it:
 
 ```sh
-export RESOLVE_SCRIPT_API="/Applications/DaVinci Resolve Studio.app/Contents/Resources/Developer/Scripting"
-export RESOLVE_SCRIPT_LIB="/Applications/DaVinci Resolve Studio.app/Contents/Libraries/Fusion/fusionscript.so"
-export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
+RESOLVE_SCRIPT_API=<path to .../Developer/Scripting>
+RESOLVE_SCRIPT_LIB=<path to fusionscript.dll / .so / .dylib>
 ```
-</details>
 
-<details>
-<summary>Windows — PowerShell</summary>
-
-```powershell
-$env:RESOLVE_SCRIPT_API = "$env:PROGRAMDATA\Blackmagic Design\DaVinci Resolve\Support\Developer\Scripting"
-$env:RESOLVE_SCRIPT_LIB = "C:\Program Files\Blackmagic Design\DaVinci Resolve\fusionscript.dll"
-$env:PYTHONPATH = "$env:PYTHONPATH;$env:RESOLVE_SCRIPT_API\Modules\"
-$env:PATH = "$env:PATH;C:\Program Files\Blackmagic Design\DaVinci Resolve"
-```
-</details>
-
-<details>
-<summary>Windows — Command Prompt</summary>
-
-```bat
-set RESOLVE_SCRIPT_API=%PROGRAMDATA%\Blackmagic Design\DaVinci Resolve\Support\Developer\Scripting
-set RESOLVE_SCRIPT_LIB=C:\Program Files\Blackmagic Design\DaVinci Resolve\fusionscript.dll
-set PYTHONPATH=%PYTHONPATH%;%RESOLVE_SCRIPT_API%\Modules\
-set PATH=%PATH%;C:\Program Files\Blackmagic Design\DaVinci Resolve
-```
-</details>
-
-<details>
-<summary>Linux — bash/zsh</summary>
-
-```sh
-export RESOLVE_SCRIPT_API="/opt/resolve/Developer/Scripting"
-export RESOLVE_SCRIPT_LIB="/opt/resolve/libs/Fusion/fusionscript.so"
-export PYTHONPATH="$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
-```
-</details>
-
-<details>
-<summary>Linux — fish</summary>
-
-```fish
-set -x RESOLVE_SCRIPT_API "/opt/resolve/Developer/Scripting"
-set -x RESOLVE_SCRIPT_LIB "/opt/resolve/libs/Fusion/fusionscript.so"
-set -x PYTHONPATH "$PYTHONPATH:$RESOLVE_SCRIPT_API/Modules/"
-```
-</details>
+`PYTHONPATH` and `PATH` do not need to be touched.
 
 ## Installation
 
+Install as a tool with [uv](https://docs.astral.sh/uv/) (recommended):
+
 ```sh
-pip install git+https://github.com/thomjiji/pxygen.git
+uv tool install git+https://github.com/geekshootjack/pxygen          # latest main
+uv tool install git+https://github.com/geekshootjack/pxygen@v2.0.0   # pinned release
+uv tool upgrade pxygen                                               # follow the installed ref
 ```
 
-Or clone and install in editable mode:
+To switch to a different release, `uv tool upgrade` won't change refs — reinstall:
 
 ```sh
-git clone https://github.com/thomjiji/pxygen.git
+uv tool install --force git+https://github.com/geekshootjack/pxygen@v2.1.0
+```
+
+Or run once without installing:
+
+```sh
+uvx --from git+https://github.com/geekshootjack/pxygen pxygen -i ... -o ...
+```
+
+For development:
+
+```sh
+git clone https://github.com/geekshootjack/pxygen.git
 cd pxygen
-pip install -e .
+uv sync --all-groups
+uv run pxygen --help
 ```
 
 ## Quick Start
@@ -122,13 +86,14 @@ pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 \
 A typical footage layout:
 
 ```
-Production/
+<project>/
 ├── Footage/
-│   ├── Shooting_Day_1/
-│   │   ├── A001_C001/
-│   │   └── B001_C001/
-│   └── Shooting_Day_2/
-└── Proxy/          ← output goes here
+│   ├── <shooting day>/          # 260710
+│   │   └── <camera type>/       # multicam, documentary
+│   │       └── <camera unit>/   # FX3#1, FX6#2
+│   └── <...>/
+└── Proxy/
+    └── <shooting day>/
 ```
 
 ## Documentation

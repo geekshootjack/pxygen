@@ -18,6 +18,22 @@ Common types: `feat`, `fix`, `chore`, `refactor`, `test`, `docs`
 - Only hold off on committing when the user explicitly asks not to commit yet, or when the work is still in a broken/unverified intermediate state.
 - Do not push unless the user asks for a push.
 
+## Cross-OS Test Rules
+
+CI runs on Windows and macOS. Two rules that have caused real failures:
+
+- Never hardcode path separators in test expectations; build them with `Path`
+  so they hold on Windows (`\`) and POSIX (`/`).
+- Never rely on filesystem enumeration order (`os.walk`, `scandir`):
+  alphabetical on NTFS, arbitrary on ext4. If order matters, sort in the
+  product code so behavior is deterministic everywhere.
+
+## Python Constraint
+
+Resolve's `fusionscript` binding requires a **system** (python.org) CPython —
+uv-managed interpreters silently fail to connect, hence
+`python-preference = "only-system"`.
+
 ## Releases
 
 Version is derived automatically from git tags via `hatch-vcs` — there is no version string to edit in code.
