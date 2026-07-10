@@ -15,6 +15,7 @@ from pathlib import Path
 from .organize import (
     describe_folders_at_in_depth,
     filter_folders_at_in_depth,
+    normalize_filter_names,
     organize_directory_mode_folders,
     organize_json_mode_files,
     parse_selection,
@@ -169,7 +170,7 @@ def process_json_mode(
     *,
     clean_image: bool = False,
     filter_mode: str | None = None,
-    filter_list: str | None = None,
+    filter_list: list[str] | None = None,
     codec: str = "auto",
     input_func: InputFn | None = None,
     output: OutputFn | None = None,
@@ -185,7 +186,7 @@ def process_json_mode(
         out_depth: Batch level relative to the inferred footage root.
         clean_image: Skip burn-in overlay when ``True``.
         filter_mode: ``'select'`` or ``'filter'`` or ``None``.
-        filter_list: Comma-separated folder names (only used when
+        filter_list: Folder names to keep (only used when
             filter_mode == ``'filter'``).
         codec: Render codec selection (see
             :func:`~pxygen.resolve.process_files_in_resolve`).
@@ -318,7 +319,7 @@ def process_directory_mode(
     *,
     clean_image: bool = False,
     filter_mode: str | None = None,
-    filter_list: str | None = None,
+    filter_list: list[str] | None = None,
     codec: str = "auto",
     input_func: InputFn | None = None,
     output: OutputFn | None = None,
@@ -333,7 +334,7 @@ def process_directory_mode(
         out_depth: Batch level relative to the provided footage root.
         clean_image: Skip burn-in overlay when ``True``.
         filter_mode: ``'select'`` or ``'filter'`` or ``None``.
-        filter_list: Comma-separated folder names (only used when
+        filter_list: Folder names to keep (only used when
             filter_mode == ``'filter'``).
         codec: Render codec selection.
     """
@@ -442,7 +443,7 @@ def process_directory_mode(
             targets_by_input = {p: targets_by_input[p] for p in selected}
 
     elif filter_mode == "filter" and filter_list:
-        filter_names = {n.strip() for n in filter_list.split(",")}
+        filter_names = set(normalize_filter_names(filter_list))
         filtered = {
             fp: targets
             for fp, targets in targets_by_input.items()
@@ -453,7 +454,7 @@ def process_directory_mode(
             logger.warning("No matching folders found for filter: %s", filter_list)
             logger.warning("Available: %s", ", ".join(available))
             raise ProxyGeneratorError(
-                f"No matching folders found for filter: {filter_list}"
+                f"No matching folders found for filter: {' '.join(filter_names)}"
             )
         targets_by_input = filtered
         logger.debug("Directory mode filter %r kept %d input folder(s)", filter_list, len(filtered))

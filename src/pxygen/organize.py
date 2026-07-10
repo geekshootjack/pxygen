@@ -116,9 +116,19 @@ def select_folders_at_in_depth(
     }
 
 
+def normalize_filter_names(filter_list: list[str]) -> list[str]:
+    """Flatten filter tokens, tolerating comma-joined names inside a token."""
+    return [
+        part.strip()
+        for token in filter_list
+        for part in token.split(",")
+        if part.strip()
+    ]
+
+
 def filter_folders_at_in_depth(
     organized_files: dict[str, dict[str, list[str]]],
-    filter_list: str | None = None,
+    filter_list: list[str] | None = None,
 ) -> dict[str, dict[str, list[str]]]:
     """Filter *organized_files* to a subset of top-level keys by folder name."""
     if not filter_list:
@@ -128,9 +138,8 @@ def filter_folders_at_in_depth(
     folder_map: dict[str, str] = {
         Path(key_path).name: key_path for key_path in organized_files
     }
-    names = [n.strip() for n in filter_list.split(",")]
     return {
         folder_map[n]: organized_files[folder_map[n]]
-        for n in names
+        for n in normalize_filter_names(filter_list)
         if n in folder_map
     }

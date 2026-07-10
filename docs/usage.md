@@ -63,7 +63,7 @@ So `-n 1 -d 2` means: group by Day, include camera reels as subfolders.
 | Flag | Description |
 |------|-------------|
 | `-s, --select` | Print a numbered list of folders and read a selection from stdin |
-| `--filter NAMES` | Comma-separated folder names to include (e.g. `"Day1,Day2"`) |
+| `--filter NAME...` | Folder names to include, space-separated (e.g. `Day1 Day2`) |
 
 **Interactive selection example:**
 
@@ -119,7 +119,7 @@ pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 1 -d 2 -k prores
 
 # Clean proxies (no burn-in), specific days
 pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 1 -d 2 \
-  -c --filter "Shooting_Day_3,Shooting_Day_4"
+  -c --filter Shooting_Day_3 Shooting_Day_4
 
 # JSON mode, group 2, interactive selection
 pxygen -i comparison.json -o /Volumes/SSD/Proxy -g 2 -n 1 -d 2 --select

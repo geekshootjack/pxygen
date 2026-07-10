@@ -85,7 +85,7 @@ class TestProcessJsonMode:
                 1,
                 2,
                 filter_mode="filter",
-                filter_list="Day2",
+                filter_list=["Day2"],
             )
 
         plan = mock_execute.call_args.args[0]
@@ -112,7 +112,7 @@ class TestProcessJsonMode:
                 1,
                 2,
                 filter_mode="filter",
-                filter_list="Day99",
+                filter_list=["Day99"],
             )
 
     def test_outputs_json_summary_as_table(self, tmp_path):
@@ -264,7 +264,7 @@ class TestProcessDirectoryMode:
                 1,
                 1,
                 filter_mode="filter",
-                filter_list="Day1",
+                filter_list=["Day1"],
             )
 
         plan = mock_execute.call_args.args[0]

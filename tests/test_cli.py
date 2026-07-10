@@ -44,8 +44,9 @@ class TestParser:
             self._parse(["-i", "comp.json", "-o", "/p", "-g", "3"])
 
     def test_filter_short(self):
+        # comma-joined tokens are tolerated; parser passes them through raw
         args = self._parse(["-i", "/f", "-o", "/p", "-f", "Day1,Day2"])
-        assert args.filter == "Day1,Day2"
+        assert args.filter == ["Day1,Day2"]
 
     def test_select_short(self):
         args = self._parse(["-i", "/f", "-o", "/p", "-s"])
@@ -186,6 +187,12 @@ class TestDispatch:
         footage.mkdir()
         with pytest.raises(SystemExit):
             self._run(["-i", str(footage)])
+
+    def test_filter_accepts_space_separated_names(self):
+        args = _build_parser().parse_args(
+            ["-i", "/footage", "-o", "/proxy", "-f", "Day1", "Day2"]
+        )
+        assert args.filter == ["Day1", "Day2"]
 
     def test_no_args_exits(self):
         with pytest.raises(SystemExit):

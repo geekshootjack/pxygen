@@ -36,8 +36,6 @@ RESOLVE_SCRIPT_API=<指向 .../Developer/Scripting 的路径>
 RESOLVE_SCRIPT_LIB=<指向 fusionscript.dll / .so / .dylib 的路径>
 ```
 
-`PYTHONPATH` 和 `PATH` 都不需要动。
-
 ## 安装
 
 推荐使用 [uv](https://docs.astral.sh/uv/) 以工具方式安装：
@@ -80,7 +78,7 @@ pxygen -i comparison.json -o /Volumes/SSD/Proxy -g 1 -n 4 -d 5
 
 # 只处理特定拍摄日
 pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 \
-  --filter "Shooting_Day_2,Shooting_Day_3"
+  --filter Shooting_Day_2 Shooting_Day_3
 ```
 
 典型素材目录结构：

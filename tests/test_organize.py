@@ -174,26 +174,30 @@ class TestFilterFoldersAtInDepth:
         assert result == self.ORGANIZED
 
     def test_filter_mode_keeps_matches(self):
-        result = filter_folders_at_in_depth(self.ORGANIZED, "Day1,Day3")
+        result = filter_folders_at_in_depth(self.ORGANIZED, ["Day1", "Day3"])
         assert len(result) == 2
         assert any("Day1" in k for k in result)
         assert any("Day3" in k for k in result)
 
     def test_filter_mode_excludes_non_matches(self):
-        result = filter_folders_at_in_depth(self.ORGANIZED, "Day1,Day3")
+        result = filter_folders_at_in_depth(self.ORGANIZED, ["Day1", "Day3"])
         assert not any("Day2" in k for k in result)
 
     def test_filter_mode_no_matches_returns_empty(self):
-        result = filter_folders_at_in_depth(self.ORGANIZED, "NonExistent")
+        result = filter_folders_at_in_depth(self.ORGANIZED, ["NonExistent"])
         assert result == {}
 
     def test_filter_mode_single_folder(self):
-        result = filter_folders_at_in_depth(self.ORGANIZED, "Day2")
+        result = filter_folders_at_in_depth(self.ORGANIZED, ["Day2"])
         assert len(result) == 1
         assert any("Day2" in k for k in result)
 
     def test_filter_mode_ignores_whitespace(self):
-        result = filter_folders_at_in_depth(self.ORGANIZED, " Day1 , Day2 ")
+        result = filter_folders_at_in_depth(self.ORGANIZED, [" Day1 ", " Day2 "])
+        assert len(result) == 2
+
+    def test_filter_mode_tolerates_comma_joined_tokens(self):
+        result = filter_folders_at_in_depth(self.ORGANIZED, ["Day1,Day2"])
         assert len(result) == 2
 
     def test_none_filter_string_returns_unchanged(self):

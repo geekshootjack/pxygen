@@ -36,8 +36,6 @@ RESOLVE_SCRIPT_API=<path to .../Developer/Scripting>
 RESOLVE_SCRIPT_LIB=<path to fusionscript.dll / .so / .dylib>
 ```
 
-`PYTHONPATH` and `PATH` do not need to be touched.
-
 ## Installation
 
 Install as a tool with [uv](https://docs.astral.sh/uv/) (recommended):
@@ -80,7 +78,7 @@ pxygen -i comparison.json -o /Volumes/SSD/Proxy -g 1 -n 4 -d 5
 
 # Process only specific shooting days
 pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 \
-  --filter "Shooting_Day_2,Shooting_Day_3"
+  --filter Shooting_Day_2 Shooting_Day_3
 ```
 
 A typical footage layout:

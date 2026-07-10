@@ -59,7 +59,7 @@ def _build_parser():
             "  pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy\n"
             "  pxygen -i comparison.json -o /Volumes/SSD/Proxy --group 2\n"
             "  pxygen -i /Volumes/SSD/Footage -o /Proxy --select\n"
-            '  pxygen -i /Volumes/SSD/Footage -o /Proxy --filter "Day1,Day2"\n'
+            "  pxygen -i /Volumes/SSD/Footage -o /Proxy --filter Day1 Day2\n"
         ),
     )
 
@@ -87,8 +87,8 @@ def _build_parser():
         help="Interactively select which folders to process",
     )
     selection_group.add_argument(
-        "-f", "--filter", type=str,
-        help="Comma-separated folder names to process (e.g. 'Day1,Day2')",
+        "-f", "--filter", nargs="+", metavar="NAME",
+        help="Folder names to process (e.g. Day1 Day2)",
     )
 
     parser.add_argument(
