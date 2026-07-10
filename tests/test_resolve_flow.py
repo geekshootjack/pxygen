@@ -10,6 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from pxygen.plan import build_resolve_execution_plan
+from pxygen.presenter import UserAbort
 from pxygen.resolve import ProxyGeneratorError, execute_resolve_plan
 
 
@@ -571,6 +572,24 @@ class TestProcessFilesInResolve:
         output_text = "\n".join(output_lines)
         assert "imported 2/3" in output_text
         assert "imported 3/3" in output_text
+
+    def test_q_at_render_confirm_aborts_after_saving(self, monkeypatch):
+        items = ["/source/a.mov"]
+        imports = {tuple(items): [FakeClip("3840x2160", "2")]}
+        project_manager, project, _ = _install_fake_resolve(monkeypatch, imports)
+
+        monkeypatch.setattr("builtins.input", lambda *_: "q")
+        with pytest.raises(UserAbort, match="remain queued"):
+            _process(
+                {"/footage/Day1": {"CamA": items}},
+                ["/footage/Day1"],
+                "/proxy",
+                1,
+                is_directory_mode=True,
+            )
+
+        assert project_manager.saved is True
+        assert project.started_rendering is False
 
     def test_aborts_with_clear_error_when_resolve_connection_dies(self, monkeypatch):
         items = ["/source/a.mov"]

@@ -73,9 +73,12 @@ Folders (3):
   2  Shooting_Day_2
   3  Shooting_Day_3
 
-Numbers like '1 3 8', range like 2-4, or 'all'
+Numbers like '1 3 8', range like 2-4, 'all', or 'q' to quit
 > 1 3
 ```
+
+Entering `q` at any prompt exits gently. At the final render confirmation,
+already-queued jobs stay in the saved Resolve project.
 
 ### JSON Mode Options
 

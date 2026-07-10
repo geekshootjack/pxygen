@@ -11,7 +11,7 @@ from pathlib import Path
 from . import __version__
 from .modes import process_directory_mode, process_json_mode
 from .paths import clean_path_input, is_json_file
-from .presenter import ConsolePresenter
+from .presenter import ConsolePresenter, UserAbort
 from .resolve import ProxyGeneratorError
 
 logger = logging.getLogger(__name__)
@@ -157,6 +157,9 @@ def main() -> None:
                 **shared,
             )
 
+    except UserAbort as exc:
+        presenter.show(str(exc) or "Aborted.")
+        sys.exit(0)
     except ProxyGeneratorError as exc:
         logger.error("%s", exc)
         sys.exit(1)

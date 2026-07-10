@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .plan import ResolveExecutionPlan
-from .presenter import ConsolePresenter, OutputFn
+from .presenter import ConsolePresenter, OutputFn, UserAbort
 
 logger = logging.getLogger(__name__)
 
@@ -628,9 +628,15 @@ def execute_resolve_plan(
 
     logger.info("Saved Resolve project")
     should_start_render = confirm_render or (
-        lambda: presenter.confirm("\nAll render jobs added. Start rendering now? (y/n)")
+        lambda: presenter.confirm("\nAll render jobs added. Start rendering now? (y/n/q)")
     )
-    if should_start_render():
+    try:
+        start_render = should_start_render()
+    except UserAbort:
+        raise UserAbort(
+            "Aborted — render jobs remain queued in the saved Resolve project."
+        ) from None
+    if start_render:
         context.project.StartRendering()
         logger.info("Started Resolve rendering")
         output("Rendering started.")

@@ -22,7 +22,7 @@ from .organize import (
 )
 from .paths import format_path_parts, path_parts
 from .plan import build_resolve_execution_plan
-from .presenter import InputFn, OutputFn, output_kv, output_numbered
+from .presenter import InputFn, OutputFn, output_kv, output_numbered, prompt_line
 from .resolve import ProxyGeneratorError, execute_resolve_plan
 
 logger = logging.getLogger(__name__)
@@ -98,7 +98,7 @@ def _print_folder_options(options, output: OutputFn) -> None:
         for label, option in zip(labels, options)
     ]
     output_numbered(f"Folders ({len(options)}):", items, output)
-    output("\nNumbers like '1 3 8', range like 2-4, or 'all'")
+    output("\nNumbers like '1 3 8', range like 2-4, 'all', or 'q' to quit")
 
 
 def _read_selection_indices(
@@ -108,7 +108,7 @@ def _read_selection_indices(
     output: OutputFn,
 ) -> list[int] | None:
     _print_folder_options(options, output)
-    choice = input_func("> ").strip()
+    choice = prompt_line(input_func)
     if choice.lower() == "all":
         return None
     return parse_selection(choice, len(options))
@@ -437,8 +437,8 @@ def process_directory_mode(
         output_numbered(
             f"Folders ({len(folder_paths)}):", _folder_labels(folder_paths), output
         )
-        output("\nNumbers like '1 3 8', range like 2-4, or 'all'")
-        choice = input_func("> ").strip()
+        output("\nNumbers like '1 3 8', range like 2-4, 'all', or 'q' to quit")
+        choice = prompt_line(input_func)
         if choice.lower() == "all":
             selected_indices = None
         else:

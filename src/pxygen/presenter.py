@@ -13,6 +13,18 @@ OutputFn = Callable[[str], None]
 InputFn = Callable[[str], str]
 
 
+class UserAbort(Exception):
+    """Raised when the user enters 'q' at an interactive prompt."""
+
+
+def prompt_line(input_func: InputFn, prompt: str = "> ") -> str:
+    """Read one line of input; 'q' triggers a gentle program exit."""
+    value = input_func(prompt).strip()
+    if value.lower() == "q":
+        raise UserAbort
+    return value
+
+
 def output_kv(title: str, pairs: list[tuple[str, object]], output: OutputFn) -> None:
     """Print a titled block of aligned key-value lines."""
     output(f"\n{title}")
@@ -49,4 +61,4 @@ class ConsolePresenter:
 
     def confirm(self, prompt: str) -> bool:
         self.show(prompt)
-        return self.read_line().strip().lower() == "y"
+        return prompt_line(self._input).lower() == "y"
