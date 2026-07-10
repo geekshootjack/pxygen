@@ -86,13 +86,14 @@ pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 \
 A typical footage layout:
 
 ```
-Production/
+<project>/
 ├── Footage/
-│   ├── Shooting_Day_1/
-│   │   ├── A001_C001/
-│   │   └── B001_C001/
-│   └── Shooting_Day_2/
+│   ├── <shooting day>/          # 260710
+│   │   └── <camera type>/       # multicam, documentary
+│   │       └── <camera unit>/   # FX3#1, FX6#2
+│   └── <...>/
 └── Proxy/
+    └── <shooting day>/
 ```
 
 ## Documentation

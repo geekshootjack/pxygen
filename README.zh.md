@@ -86,13 +86,14 @@ pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 \
 典型素材目录结构：
 
 ```
-Production/
-├── Footage/
-│   ├── Shooting_Day_1/
-│   │   ├── A001_C001/
-│   │   └── B001_C001/
-│   └── Shooting_Day_2/
-└── Proxy/
+<项目文件夹>/
+├── 素材/
+│   ├── <拍摄日>/                # 260710
+│   │   └── <机位类型>/          # 多机位、纪录
+│   │       └── <机位编号>/      # FX3#1、FX6#2
+│   └── <...>/
+└── 代理/
+    └── <拍摄日>/
 ```
 
 ## 文档
