@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--DbAppVer="19.1.2.0003" DbPrjVer="14"-->
-<FontRenderItemVec DbId="20582ed0-0150-4775-9a7a-d21d8a888455">
+<!--DbAppVer="20.1.0.0020" DbPrjVer="15"-->
+<FontRenderItemVec DbId="c1e90d89-1621-4c45-b9a9-1c7e6f9610b1">
  <FieldsBlob/>
  <InheritedCollection>
   <Element>
-   <FontRenderItem DbId="b487e3c9-3067-4770-864f-5c1600984154">
-    <FieldsBlob>0000000100000002000000160054006500780074004f00700061006300690074007900000087003fe0000440000000000000100046006f006e007400530069007a006500000087003f9c71c720000000</FieldsBlob>
+   <FontRenderItem DbId="b0a3b688-b813-4f90-ab5a-d52e751c4881">
+    <FieldsBlob>0000000100000002000000160054006500780074004f00700061006300690074007900000087003fe0000440000000000000100046006f006e007400530069007a006500000087003f92f684c0000000</FieldsBlob>
     <Text/>
-    <FontDesc>Courier New,-1,30,5,50,0,0,0,0,0</FontDesc>
+    <FontDesc>Courier New,-1,20,5,50,0,0,0,0,0</FontDesc>
     <Type>4</Type>
-    <X>0.796875</X>
-    <Y>0.027777791023254395</Y>
+    <X>0.4947916567325592</X>
+    <Y>0.9166666865348816</Y>
     <ForegroundColor>
      <Element>1</Element>
      <Element>1</Element>
@@ -21,8 +21,8 @@
      <Element>0</Element>
      <Element>0</Element>
     </BackgroundColor>
-    <Opacity>0.5020009279251099</Opacity>
-    <HorzAlign>0</HorzAlign>
+    <Opacity>0.20000000298023224</Opacity>
+    <HorzAlign>1</HorzAlign>
     <IsFadeUp>false</IsFadeUp>
     <FadeUp>0</FadeUp>
     <IsFadeDown>false</IsFadeDown>
@@ -32,13 +32,13 @@
    </FontRenderItem>
   </Element>
   <Element>
-   <FontRenderItem DbId="df94bcfb-7d2c-46a1-bae2-acf30637bfac">
-    <FieldsBlob>0000000100000002000000160054006500780074004f00700061006300690074007900000087003fe0000440000000000000100046006f006e007400530069007a006500000087003f9c71c720000000</FieldsBlob>
+   <FontRenderItem DbId="e1b8f462-8f77-4c26-b03f-c874d97d00a8">
+    <FieldsBlob>0000000100000002000000160054006500780074004f00700061006300690074007900000087003fe0000440000000000000100046006f006e007400530069007a006500000087003f92f684c0000000</FieldsBlob>
     <Text/>
-    <FontDesc>Courier New,-1,30,5,50,0,0,0,0,0</FontDesc>
+    <FontDesc>Courier New,-1,20,5,50,0,0,0,0,0</FontDesc>
     <Type>256</Type>
-    <X>0.015625</X>
-    <Y>0.027777791023254395</Y>
+    <X>0.4947916567325592</X>
+    <Y>0.05370372533798218</Y>
     <ForegroundColor>
      <Element>1</Element>
      <Element>1</Element>
@@ -49,8 +49,8 @@
      <Element>0</Element>
      <Element>0</Element>
     </BackgroundColor>
-    <Opacity>0.5020009279251099</Opacity>
-    <HorzAlign>0</HorzAlign>
+    <Opacity>0.20000000298023224</Opacity>
+    <HorzAlign>1</HorzAlign>
     <IsFadeUp>false</IsFadeUp>
     <FadeUp>0</FadeUp>
     <IsFadeDown>false</IsFadeDown>

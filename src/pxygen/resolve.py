@@ -37,6 +37,10 @@ _MEDIA_IMPORT_SUFFIXES = {
     ".r3d",
 }
 
+# Centered layout (clip name top, timecode below it) that fits both landscape
+# and portrait proxies; exported copy lives in presets/burn-in-vertical.xml
+_BURN_IN_PRESET = "burn-in-vertical"
+
 # Import media in chunks: keeps each AddItemListToMediaPool transaction small,
 # isolates failures to one chunk instead of the whole batch, and lets the TUI
 # show progress during long imports.
@@ -532,8 +536,14 @@ def execute_resolve_plan(
     )
 
     if not plan.clean_image:
-        context.project.LoadBurnInPreset("burn-in")
-        logger.debug("Loaded burn-in preset")
+        if context.project.LoadBurnInPreset(_BURN_IN_PRESET):
+            logger.debug("Loaded burn-in preset %r", _BURN_IN_PRESET)
+        else:
+            logger.warning(
+                "Burn-in preset %r not found in Resolve; proxies will render"
+                " without burn-ins. Import it from presets/burn-in-vertical.xml.",
+                _BURN_IN_PRESET,
+            )
 
     counter = itertools.count(1)
     bin_cache: _BinCache = {}

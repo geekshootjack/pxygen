@@ -169,6 +169,7 @@ class FakeProject:
 
     def LoadBurnInPreset(self, preset_name: str):
         self.loaded_burn_in_presets.append(preset_name)
+        return True
 
     def LoadRenderPreset(self, preset_name: str):
         self.loaded_render_presets.append(preset_name)
@@ -255,7 +256,7 @@ class TestProcessFilesInResolve:
 
         assert project_manager.saved is True
         assert project.started_rendering is False
-        assert project.loaded_burn_in_presets == ["burn-in"]
+        assert project.loaded_burn_in_presets == ["burn-in-vertical"]
         assert project.loaded_render_presets == [
             "fhd-h265-5mbps",
             "fhd-prores-proxy",

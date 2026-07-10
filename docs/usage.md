@@ -134,9 +134,9 @@ Preset files are included in the `presets/` directory:
 
 | Preset name | File | Used for |
 |-------------|------|----------|
-| `fhd-h265-5mbps.xml` | `presets/fhd-h265-5mbps.xml.xml` | Standard proxy render |
-| `fhd-prores-proxy.xml` | `presets/fhd-prores-proxy.xml.xml` | Multi-audio proxy render |
-| `burn-in` | `presets/burn-in.xml` | Timecode + clip name overlay |
+| `fhd-h265-5mbps` | `presets/fhd-h265-5mbps.xml` | Standard proxy render |
+| `fhd-prores-proxy` | `presets/fhd-prores-proxy.xml` | Multi-audio proxy render |
+| `burn-in-vertical` | `presets/burn-in-vertical.xml` | Clip name + timecode overlay, centered — fits landscape and portrait |
 
 To import: **DaVinci Resolve → Deliver → Render Settings → ⋯ → Import Preset**.
 
