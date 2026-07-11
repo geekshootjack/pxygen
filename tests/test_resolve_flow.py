@@ -571,6 +571,82 @@ class TestProcessFilesInResolve:
         assert "imported 2/3" in output_text
         assert "imported 3/3" in output_text
 
+    def test_auto_launches_resolve_when_not_running(self, monkeypatch):
+        items = ["/source/a.mov"]
+        imports = {tuple(items): [FakeClip("1920x1080", "2")]}
+        media_pool = FakeMediaPool()
+        project = FakeProject(media_pool)
+        project_manager = FakeProjectManager(project)
+        resolve = FakeResolve(project_manager, FakeMediaStorage(imports))
+
+        launched: list[Path] = []
+        fake_module = types.SimpleNamespace(
+            scriptapp=lambda _: resolve if launched else None
+        )
+        monkeypatch.setitem(sys.modules, "DaVinciResolveScript", fake_module)
+        monkeypatch.setattr(
+            "pxygen.resolve._resolve_executable", lambda: Path("/fake/Resolve.exe")
+        )
+        monkeypatch.setattr(
+            "pxygen.resolve._launch_resolve", lambda exe: launched.append(exe)
+        )
+        monkeypatch.setattr("pxygen.resolve.time.sleep", lambda _: None)
+        output_lines: list[str] = []
+
+        _process(
+            {"/footage/Day1": {"CamA": items}},
+            ["/footage/Day1"],
+            "/proxy",
+            1,
+            is_directory_mode=True,
+            output=output_lines.append,
+            confirm_render=lambda: False,
+        )
+
+        assert launched == [Path("/fake/Resolve.exe")]
+        assert project.render_job_count == 1
+        output_text = "\n".join(output_lines)
+        assert "launching it" in output_text
+        assert "Resolve is up." in output_text
+
+    def test_clear_error_when_resolve_executable_not_found(self, monkeypatch):
+        fake_module = types.SimpleNamespace(scriptapp=lambda _: None)
+        monkeypatch.setitem(sys.modules, "DaVinciResolveScript", fake_module)
+        monkeypatch.setattr("pxygen.resolve._resolve_executable", lambda: None)
+
+        with pytest.raises(ProxyGeneratorError, match="Could not connect"):
+            _process(
+                {"/footage/Day1": {"CamA": ["/source/a.mov"]}},
+                ["/footage/Day1"],
+                "/proxy",
+                1,
+                is_directory_mode=True,
+                confirm_render=lambda: False,
+            )
+
+    def test_clear_error_when_launched_resolve_never_answers(self, monkeypatch):
+        fake_module = types.SimpleNamespace(scriptapp=lambda _: None)
+        monkeypatch.setitem(sys.modules, "DaVinciResolveScript", fake_module)
+        monkeypatch.setattr(
+            "pxygen.resolve._resolve_executable", lambda: Path("/fake/Resolve.exe")
+        )
+        launched: list[Path] = []
+        monkeypatch.setattr(
+            "pxygen.resolve._launch_resolve", lambda exe: launched.append(exe)
+        )
+        monkeypatch.setattr("pxygen.resolve._RESOLVE_LAUNCH_TIMEOUT_SECONDS", 0)
+
+        with pytest.raises(ProxyGeneratorError, match="Could not connect"):
+            _process(
+                {"/footage/Day1": {"CamA": ["/source/a.mov"]}},
+                ["/footage/Day1"],
+                "/proxy",
+                1,
+                is_directory_mode=True,
+                confirm_render=lambda: False,
+            )
+        assert launched == [Path("/fake/Resolve.exe")]
+
     def test_q_at_render_confirm_aborts_after_saving(self, monkeypatch):
         items = ["/source/a.mov"]
         imports = {tuple(items): [FakeClip("3840x2160", "2")]}

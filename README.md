@@ -18,7 +18,7 @@ pxygen imports your footage into DaVinci Resolve, organises it into bins that mi
 ## Requirements
 
 - Python ≥ 3.10, **64-bit**, official python.org build (Resolve's scripting binding does not work with uv-managed Python)
-- DaVinci Resolve ≥ 19.1.4 (must be running)
+- DaVinci Resolve ≥ 19.1.4 (pxygen launches it automatically if it isn't running)
 - Resolve render presets: `fhd-h265-5mbps`, `fhd-prores-proxy`
 - Resolve burn-in preset: `burn-in-vertical` (centered layout, fits landscape and portrait)
 

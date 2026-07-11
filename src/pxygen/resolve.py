@@ -10,7 +10,9 @@ import itertools
 import logging
 import os
 import re
+import subprocess
 import sys
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -177,8 +179,67 @@ def _setup_resolve_env() -> None:
     )
 
 
-def _connect_to_resolve(project_prefix: str) -> _ResolveContext:
-    """Connect to Resolve and create a fresh proxy project."""
+# Resolve cold-start is slow (splash, database, project manager); the
+# scripting server only accepts connections once the UI is fully up.
+_RESOLVE_LAUNCH_TIMEOUT_SECONDS = 120
+_RESOLVE_POLL_INTERVAL_SECONDS = 2.0
+
+
+def _resolve_executable() -> Path | None:
+    """Locate the Resolve app next to the scripting library, if possible."""
+    lib = os.environ.get("RESOLVE_SCRIPT_LIB", "")
+    if not lib:
+        return None
+    lib_path = Path(lib)
+    if sys.platform == "win32":
+        exe = lib_path.parent / "Resolve.exe"
+        return exe if exe.exists() else None
+    if sys.platform == "darwin":
+        for ancestor in lib_path.parents:
+            if ancestor.suffix == ".app":
+                return ancestor if ancestor.exists() else None
+    return None
+
+
+def _launch_resolve(executable: Path) -> None:
+    """Start Resolve detached so it outlives this process."""
+    if sys.platform == "darwin":
+        subprocess.Popen(["open", "-a", str(executable)])
+    else:
+        subprocess.Popen(
+            [str(executable)],
+            creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
+        )
+
+
+def _launch_and_wait_for_resolve(dvr_script, output: OutputFn):
+    """Bring Resolve up and poll until its scripting server answers."""
+    executable = _resolve_executable()
+    if executable is None:
+        return None
+    output("Resolve is not running — launching it...")
+    logger.info("Launching Resolve from %s", executable)
+    try:
+        _launch_resolve(executable)
+    except OSError as exc:
+        logger.warning("Failed to launch Resolve from %s: %s", executable, exc)
+        return None
+    output(
+        "  Waiting for Resolve to accept scripting connections"
+        f" (up to {_RESOLVE_LAUNCH_TIMEOUT_SECONDS}s)..."
+    )
+    deadline = time.monotonic() + _RESOLVE_LAUNCH_TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
+        time.sleep(_RESOLVE_POLL_INTERVAL_SECONDS)
+        resolve = dvr_script.scriptapp("Resolve")
+        if resolve is not None:
+            output("  Resolve is up.")
+            return resolve
+    return None
+
+
+def _connect_to_resolve(project_prefix: str, output: OutputFn) -> _ResolveContext:
+    """Connect to Resolve (launching it if needed) and create a fresh proxy project."""
     # Skip environment probing when the module is already importable
     # (previously imported, or injected by tests).
     if "DaVinciResolveScript" not in sys.modules:
@@ -197,9 +258,12 @@ def _connect_to_resolve(project_prefix: str) -> _ResolveContext:
 
     resolve = dvr_script.scriptapp("Resolve")
     if resolve is None:
+        resolve = _launch_and_wait_for_resolve(dvr_script, output)
+    if resolve is None:
         raise ProxyGeneratorError(
             "Could not connect to DaVinci Resolve. "
-            "Make sure Resolve is running before executing this script."
+            "Make sure Resolve is installed and 'External scripting using' is"
+            " set to Local in Preferences → System → General."
         )
 
     project_manager = resolve.GetProjectManager()
@@ -520,7 +584,7 @@ def execute_resolve_plan(
     """Execute a pre-built Resolve plan."""
     presenter = ConsolePresenter(output_func=output)
     output = presenter.show
-    context = _connect_to_resolve(plan.project_prefix)
+    context = _connect_to_resolve(plan.project_prefix, output)
     standard_preset, multi_audio_preset = _resolve_render_presets(plan.codec)
     logger.info(
         "Executing Resolve plan mode=%s project_prefix=%s footage_folders=%d codec=%s",

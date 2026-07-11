@@ -32,7 +32,8 @@ uv tool upgrade pxygen   # follows the installed ref (the branch)
 
 ## 3. Run the test
 
-DaVinci Resolve must be running. For large batches, keep a log to review
+pxygen launches Resolve automatically when it isn't running (cold start can
+take a couple of minutes on the first poll). For large batches, keep a log to review
 afterwards:
 
 ```sh

@@ -89,7 +89,8 @@ Presets only need re-importing when they change (the Releases notes will say so)
   tool env is on a uv-managed interpreter; check with
   `uv tool list` / the env's `pyvenv.cfg`, reinstall with
   `uv tool install --force --no-managed-python ...`
-- **"Could not connect to DaVinci Resolve"** — Resolve is not running, or
-  external scripting is disabled (step 5 above)
+- **"Could not connect to DaVinci Resolve"** — auto-launch could not find the
+  Resolve executable (non-standard install), Resolve took longer than 120s to
+  start, or external scripting is disabled (step 5 above)
 - **Proxies render without burn-ins** — the `burn-in-vertical` preset was not
   imported (a warning appears in the log)

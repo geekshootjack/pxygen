@@ -18,7 +18,7 @@ pxygen 将素材导入 DaVinci Resolve，按照文件夹层级自动建立媒体
 ## 环境要求
 
 - Python ≥ 3.10，**必须是 64 位**官方 python.org 版本（Resolve 脚本接口不兼容 uv 托管的 Python）
-- DaVinci Resolve ≥ 19.1.4（运行脚本前需保持 Resolve 开启）
+- DaVinci Resolve ≥ 19.1.4（未运行时 pxygen 会自动启动它）
 - Resolve 渲染预设：`fhd-h265-5mbps`、`fhd-prores-proxy`
 - Resolve 数据烧录预设：`burn-in-vertical`（居中布局，横竖屏通用）
 
