@@ -212,18 +212,56 @@ def _launch_resolve(executable: Path) -> None:
         )
 
 
-def _launch_and_wait_for_resolve(dvr_script, output: OutputFn):
-    """Bring Resolve up and poll until its scripting server answers."""
+def _probe_resolve_connection() -> bool:
+    """Check from a throwaway subprocess whether Resolve accepts connections.
+
+    fusionscript decides connectivity when the extension first loads — a
+    process that imported it while Resolve was down can never connect, no
+    matter how often scriptapp() is retried. Each probe subprocess loads the
+    extension fresh, so it reflects the current state.
+    """
+    modules_dir = Path(os.environ["RESOLVE_SCRIPT_API"]) / "Modules"
+    lines = ["import os, sys", f"sys.path.insert(0, {str(modules_dir)!r})"]
+    if sys.platform == "win32":
+        lib = os.environ.get("RESOLVE_SCRIPT_LIB", "")
+        if lib:
+            lines.append(f"os.add_dll_directory({str(Path(lib).parent)!r})")
+    lines += [
+        "import DaVinciResolveScript as dvr",
+        "sys.exit(0 if dvr.scriptapp('Resolve') else 1)",
+    ]
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-c", "\n".join(lines)],
+            capture_output=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        logger.debug("Resolve probe subprocess failed: %s", exc)
+        return False
+    if completed.returncode not in (0, 1):
+        logger.debug("Resolve probe stderr: %s", completed.stderr.decode(errors="replace"))
+    return completed.returncode == 0
+
+
+def _ensure_resolve_ready(output: OutputFn) -> None:
+    """Make sure Resolve is up before fusionscript is loaded in this process."""
+    if _probe_resolve_connection():
+        return
     executable = _resolve_executable()
     if executable is None:
-        return None
+        raise ProxyGeneratorError(
+            "Could not connect to DaVinci Resolve and could not locate its"
+            " executable to launch it. Start Resolve manually, and check that"
+            " 'External scripting using' is set to Local in Preferences →"
+            " System → General."
+        )
     output("Resolve is not running — launching it...")
     logger.info("Launching Resolve from %s", executable)
     try:
         _launch_resolve(executable)
     except OSError as exc:
-        logger.warning("Failed to launch Resolve from %s: %s", executable, exc)
-        return None
+        raise ProxyGeneratorError(f"Failed to launch Resolve: {exc}") from exc
     output(
         "  Waiting for Resolve to accept scripting connections"
         f" (up to {_RESOLVE_LAUNCH_TIMEOUT_SECONDS}s)..."
@@ -231,18 +269,24 @@ def _launch_and_wait_for_resolve(dvr_script, output: OutputFn):
     deadline = time.monotonic() + _RESOLVE_LAUNCH_TIMEOUT_SECONDS
     while time.monotonic() < deadline:
         time.sleep(_RESOLVE_POLL_INTERVAL_SECONDS)
-        resolve = dvr_script.scriptapp("Resolve")
-        if resolve is not None:
+        if _probe_resolve_connection():
             output("  Resolve is up.")
-            return resolve
-    return None
+            return
+    raise ProxyGeneratorError(
+        f"Resolve did not accept scripting connections within"
+        f" {_RESOLVE_LAUNCH_TIMEOUT_SECONDS}s of launching. Check that"
+        " 'External scripting using' is set to Local in Preferences →"
+        " System → General, then re-run pxygen."
+    )
+
+
+def _needs_fresh_load() -> bool:
+    return "DaVinciResolveScript" not in sys.modules
 
 
 def _connect_to_resolve(project_prefix: str, output: OutputFn) -> _ResolveContext:
     """Connect to Resolve (launching it if needed) and create a fresh proxy project."""
-    # Skip environment probing when the module is already importable
-    # (previously imported, or injected by tests).
-    if "DaVinciResolveScript" not in sys.modules:
+    if _needs_fresh_load():
         _setup_resolve_env()
 
         # Python 3.8+ on Windows calls SetDefaultDllDirectories() at startup,
@@ -254,15 +298,17 @@ def _connect_to_resolve(project_prefix: str, output: OutputFn) -> _ResolveContex
             if resolve_lib:
                 os.add_dll_directory(str(Path(resolve_lib).parent))
 
+        # Must happen BEFORE the import below: fusionscript can only connect
+        # if Resolve is already up when the extension first loads.
+        _ensure_resolve_ready(output)
+
     import DaVinciResolveScript as dvr_script  # noqa: PLC0415
 
     resolve = dvr_script.scriptapp("Resolve")
     if resolve is None:
-        resolve = _launch_and_wait_for_resolve(dvr_script, output)
-    if resolve is None:
         raise ProxyGeneratorError(
             "Could not connect to DaVinci Resolve. "
-            "Make sure Resolve is installed and 'External scripting using' is"
+            "Make sure Resolve is running and 'External scripting using' is"
             " set to Local in Preferences → System → General."
         )
 

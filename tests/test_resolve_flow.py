@@ -571,26 +571,35 @@ class TestProcessFilesInResolve:
         assert "imported 2/3" in output_text
         assert "imported 3/3" in output_text
 
-    def test_auto_launches_resolve_when_not_running(self, monkeypatch):
-        items = ["/source/a.mov"]
-        imports = {tuple(items): [FakeClip("1920x1080", "2")]}
+    def _fresh_load_setup(self, monkeypatch, imports):
+        """Simulate a first-time fusionscript load with the fake module."""
         media_pool = FakeMediaPool()
         project = FakeProject(media_pool)
         project_manager = FakeProjectManager(project)
         resolve = FakeResolve(project_manager, FakeMediaStorage(imports))
-
-        launched: list[Path] = []
-        fake_module = types.SimpleNamespace(
-            scriptapp=lambda _: resolve if launched else None
-        )
+        fake_module = types.SimpleNamespace(scriptapp=lambda _: resolve)
         monkeypatch.setitem(sys.modules, "DaVinciResolveScript", fake_module)
+        monkeypatch.setattr("pxygen.resolve._needs_fresh_load", lambda: True)
+        monkeypatch.setattr("pxygen.resolve._setup_resolve_env", lambda: None)
+        monkeypatch.setattr("pxygen.resolve.time.sleep", lambda _: None)
+        return project
+
+    def test_auto_launches_resolve_when_probe_fails(self, monkeypatch):
+        items = ["/source/a.mov"]
+        project = self._fresh_load_setup(
+            monkeypatch, {tuple(items): [FakeClip("1920x1080", "2")]}
+        )
+        launched: list[Path] = []
+        # Resolve not up until launched, then the next probe succeeds
+        monkeypatch.setattr(
+            "pxygen.resolve._probe_resolve_connection", lambda: bool(launched)
+        )
         monkeypatch.setattr(
             "pxygen.resolve._resolve_executable", lambda: Path("/fake/Resolve.exe")
         )
         monkeypatch.setattr(
             "pxygen.resolve._launch_resolve", lambda exe: launched.append(exe)
         )
-        monkeypatch.setattr("pxygen.resolve.time.sleep", lambda _: None)
         output_lines: list[str] = []
 
         _process(
@@ -609,12 +618,35 @@ class TestProcessFilesInResolve:
         assert "launching it" in output_text
         assert "Resolve is up." in output_text
 
+    def test_no_launch_when_probe_succeeds_immediately(self, monkeypatch):
+        items = ["/source/a.mov"]
+        project = self._fresh_load_setup(
+            monkeypatch, {tuple(items): [FakeClip("1920x1080", "2")]}
+        )
+        monkeypatch.setattr("pxygen.resolve._probe_resolve_connection", lambda: True)
+        launched: list[Path] = []
+        monkeypatch.setattr(
+            "pxygen.resolve._launch_resolve", lambda exe: launched.append(exe)
+        )
+
+        _process(
+            {"/footage/Day1": {"CamA": items}},
+            ["/footage/Day1"],
+            "/proxy",
+            1,
+            is_directory_mode=True,
+            confirm_render=lambda: False,
+        )
+
+        assert launched == []
+        assert project.render_job_count == 1
+
     def test_clear_error_when_resolve_executable_not_found(self, monkeypatch):
-        fake_module = types.SimpleNamespace(scriptapp=lambda _: None)
-        monkeypatch.setitem(sys.modules, "DaVinciResolveScript", fake_module)
+        self._fresh_load_setup(monkeypatch, {})
+        monkeypatch.setattr("pxygen.resolve._probe_resolve_connection", lambda: False)
         monkeypatch.setattr("pxygen.resolve._resolve_executable", lambda: None)
 
-        with pytest.raises(ProxyGeneratorError, match="Could not connect"):
+        with pytest.raises(ProxyGeneratorError, match="could not locate"):
             _process(
                 {"/footage/Day1": {"CamA": ["/source/a.mov"]}},
                 ["/footage/Day1"],
@@ -625,8 +657,8 @@ class TestProcessFilesInResolve:
             )
 
     def test_clear_error_when_launched_resolve_never_answers(self, monkeypatch):
-        fake_module = types.SimpleNamespace(scriptapp=lambda _: None)
-        monkeypatch.setitem(sys.modules, "DaVinciResolveScript", fake_module)
+        self._fresh_load_setup(monkeypatch, {})
+        monkeypatch.setattr("pxygen.resolve._probe_resolve_connection", lambda: False)
         monkeypatch.setattr(
             "pxygen.resolve._resolve_executable", lambda: Path("/fake/Resolve.exe")
         )
@@ -636,7 +668,7 @@ class TestProcessFilesInResolve:
         )
         monkeypatch.setattr("pxygen.resolve._RESOLVE_LAUNCH_TIMEOUT_SECONDS", 0)
 
-        with pytest.raises(ProxyGeneratorError, match="Could not connect"):
+        with pytest.raises(ProxyGeneratorError, match="did not accept"):
             _process(
                 {"/footage/Day1": {"CamA": ["/source/a.mov"]}},
                 ["/footage/Day1"],
