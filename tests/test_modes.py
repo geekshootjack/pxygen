@@ -13,7 +13,7 @@ from pxygen.modes import (
 )
 from pxygen.paths import path_parts
 from pxygen.plan import ResolveExecutionPlan
-from pxygen.resolve import ProxyGeneratorError
+from pxygen.resolve import PxygenError
 
 
 class TestProcessJsonMode:
@@ -102,7 +102,7 @@ class TestProcessJsonMode:
             encoding="utf-8",
         )
 
-        with pytest.raises(ProxyGeneratorError, match="No folders to process after filtering"):
+        with pytest.raises(PxygenError, match="No folders to process after filtering"):
             process_json_mode(
                 str(json_path),
                 "/proxy",

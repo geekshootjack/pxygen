@@ -11,7 +11,7 @@ import pytest
 
 from pxygen.plan import build_resolve_execution_plan
 from pxygen.presenter import UserAbort
-from pxygen.resolve import ProxyGeneratorError, execute_resolve_plan
+from pxygen.resolve import PxygenError, execute_resolve_plan
 
 
 def _process(
@@ -646,7 +646,7 @@ class TestProcessFilesInResolve:
         monkeypatch.setattr("pxygen.resolve._probe_resolve_connection", lambda: False)
         monkeypatch.setattr("pxygen.resolve._resolve_executable", lambda: None)
 
-        with pytest.raises(ProxyGeneratorError, match="could not locate"):
+        with pytest.raises(PxygenError, match="could not locate"):
             _process(
                 {"/footage/Day1": {"CamA": ["/source/a.mov"]}},
                 ["/footage/Day1"],
@@ -668,7 +668,7 @@ class TestProcessFilesInResolve:
         )
         monkeypatch.setattr("pxygen.resolve._RESOLVE_LAUNCH_TIMEOUT_SECONDS", 0)
 
-        with pytest.raises(ProxyGeneratorError, match="did not accept"):
+        with pytest.raises(PxygenError, match="did not accept"):
             _process(
                 {"/footage/Day1": {"CamA": ["/source/a.mov"]}},
                 ["/footage/Day1"],
@@ -704,7 +704,7 @@ class TestProcessFilesInResolve:
         # Simulate a crashed Resolve: remote attribute lookups return None
         project.GetName = lambda: None
 
-        with pytest.raises(ProxyGeneratorError, match="Lost connection"):
+        with pytest.raises(PxygenError, match="Lost connection"):
             _process(
                 {"/footage/Day1": {"CamA": items}},
                 ["/footage/Day1"],

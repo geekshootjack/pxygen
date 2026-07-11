@@ -48,7 +48,7 @@ _BURN_IN_PRESET = "burn-in-vertical"
 # show progress during long imports.
 _IMPORT_CHUNK_SIZE = 100
 
-class ProxyGeneratorError(Exception):
+class PxygenError(Exception):
     """Raised for expected, user-facing errors in proxy generation."""
 
 
@@ -172,7 +172,7 @@ def _setup_resolve_env() -> None:
             logger.debug("Auto-configured Resolve scripting env from %s", api_path)
             return
 
-    raise ProxyGeneratorError(
+    raise PxygenError(
         "Could not find DaVinci Resolve scripting modules. "
         "Set RESOLVE_SCRIPT_API and RESOLVE_SCRIPT_LIB manually — "
         "see the Environment Setup section in README.md."
@@ -250,7 +250,7 @@ def _ensure_resolve_ready(output: OutputFn) -> None:
         return
     executable = _resolve_executable()
     if executable is None:
-        raise ProxyGeneratorError(
+        raise PxygenError(
             "Could not connect to DaVinci Resolve and could not locate its"
             " executable to launch it. Start Resolve manually, and check that"
             " 'External scripting using' is set to Local in Preferences →"
@@ -261,7 +261,7 @@ def _ensure_resolve_ready(output: OutputFn) -> None:
     try:
         _launch_resolve(executable)
     except OSError as exc:
-        raise ProxyGeneratorError(f"Failed to launch Resolve: {exc}") from exc
+        raise PxygenError(f"Failed to launch Resolve: {exc}") from exc
     output(
         "  Waiting for Resolve to accept scripting connections"
         f" (up to {_RESOLVE_LAUNCH_TIMEOUT_SECONDS}s)..."
@@ -272,7 +272,7 @@ def _ensure_resolve_ready(output: OutputFn) -> None:
         if _probe_resolve_connection():
             output("  Resolve is up.")
             return
-    raise ProxyGeneratorError(
+    raise PxygenError(
         f"Resolve did not accept scripting connections within"
         f" {_RESOLVE_LAUNCH_TIMEOUT_SECONDS}s of launching. Check that"
         " 'External scripting using' is set to Local in Preferences →"
@@ -306,7 +306,7 @@ def _connect_to_resolve(project_prefix: str, output: OutputFn) -> _ResolveContex
 
     resolve = dvr_script.scriptapp("Resolve")
     if resolve is None:
-        raise ProxyGeneratorError(
+        raise PxygenError(
             "Could not connect to DaVinci Resolve. "
             "Make sure Resolve is running and 'External scripting using' is"
             " set to Local in Preferences → System → General."
@@ -334,7 +334,7 @@ def _ensure_resolve_alive(context: _ResolveContext) -> None:
     except Exception:
         alive = False
     if not alive:
-        raise ProxyGeneratorError(
+        raise PxygenError(
             "Lost connection to DaVinci Resolve — it may have crashed. "
             "Restart Resolve and re-run pxygen for the remaining folders."
         )
@@ -465,12 +465,12 @@ def _add_render_job(
     proxy_width, proxy_height = calculate_proxy_dimensions(resolution_str)
     timeline = media_pool.CreateTimelineFromClips(timeline_name, clips)
     if timeline is None:
-        raise ProxyGeneratorError(f"Failed to create timeline {timeline_name!r} from clips.")
+        raise PxygenError(f"Failed to create timeline {timeline_name!r} from clips.")
     logger.debug("Created timeline %r from %d clip(s)", timeline_name, len(clips))
 
     if hasattr(project, "SetCurrentTimeline"):
         if not project.SetCurrentTimeline(timeline):
-            raise ProxyGeneratorError(f"Failed to set current timeline to {timeline_name!r}.")
+            raise PxygenError(f"Failed to set current timeline to {timeline_name!r}.")
         logger.debug("Set current timeline to %r before queueing render job", timeline_name)
 
     timeline_settings = {
@@ -480,7 +480,7 @@ def _add_render_job(
     }
     for setting_name, setting_value in timeline_settings.items():
         if not timeline.SetSetting(setting_name, setting_value):
-            raise ProxyGeneratorError(
+            raise PxygenError(
                 f"Failed to set timeline setting {setting_name!r} to {setting_value!r} "
                 f"for {timeline_name!r}."
             )
@@ -488,7 +488,7 @@ def _add_render_job(
         for setting_name, setting_value in timeline_settings.items():
             actual_value = timeline.GetSetting(setting_name)
             if actual_value != setting_value:
-                raise ProxyGeneratorError(
+                raise PxygenError(
                     f"Timeline setting {setting_name!r} for {timeline_name!r} "
                     f"did not stick (expected {setting_value!r}, got {actual_value!r})."
                 )
@@ -665,7 +665,7 @@ def execute_resolve_plan(
         )
         if main_bin is None:
             _ensure_resolve_alive(context)
-            raise ProxyGeneratorError(
+            raise PxygenError(
                 f"Resolve failed to create media pool bin "
                 f"{footage_folder.footage_folder_name!r}."
             )
@@ -723,7 +723,7 @@ def execute_resolve_plan(
                     counter,
                     output,
                 )
-            except ProxyGeneratorError:
+            except PxygenError:
                 raise
             except Exception as exc:
                 logger.error("Error processing items: %s", exc)

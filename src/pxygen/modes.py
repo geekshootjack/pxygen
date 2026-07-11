@@ -24,7 +24,7 @@ from .organize import (
 from .paths import format_path_parts, path_parts
 from .plan import build_resolve_execution_plan
 from .presenter import InputFn, OutputFn, output_kv, output_numbered, prompt_line
-from .resolve import ProxyGeneratorError, execute_resolve_plan
+from .resolve import PxygenError, execute_resolve_plan
 
 logger = logging.getLogger(__name__)
 
@@ -186,8 +186,7 @@ def process_json_mode(
         filter_mode: ``'select'`` or ``'filter'`` or ``None``.
         filter_list: Folder names to keep (only used when
             filter_mode == ``'filter'``).
-        codec: Render codec selection (see
-            :func:`~pxygen.resolve.process_files_in_resolve`).
+        codec: Render codec selection (``auto``/``h265``/``prores``).
     """
     output = output or print
     input_func = input_func or input
@@ -201,12 +200,12 @@ def process_json_mode(
     )
 
     if dataset not in (1, 2):
-        raise ProxyGeneratorError(f"Invalid dataset value '{dataset}'. Must be 1 or 2.")
+        raise PxygenError(f"Invalid dataset value '{dataset}'. Must be 1 or 2.")
 
     try:
         comparison_data: dict = json.loads(Path(json_path).read_text(encoding="utf-8"))
     except Exception as exc:
-        raise ProxyGeneratorError(f"Error reading JSON file: {exc}") from exc
+        raise PxygenError(f"Error reading JSON file: {exc}") from exc
     logger.debug("Loaded comparison JSON from %s", json_path)
 
     file_list: list[str] = list(comparison_data.get(f"files_only_in_group{dataset}", []))
@@ -229,7 +228,7 @@ def process_json_mode(
         )
 
     if not file_list:
-        raise ProxyGeneratorError(f"No files found in group{dataset}")
+        raise PxygenError(f"No files found in group{dataset}")
 
     root_depth = _infer_json_root_depth(file_list, out_depth)
     in_depth_spec = _normalize_depth(root_depth, in_depth)
@@ -292,7 +291,7 @@ def process_json_mode(
             logger.debug("JSON mode filter %r kept %d folder group(s)", filter_list, len(organized))
 
     if not organized:
-        raise ProxyGeneratorError("No folders to process after filtering.")
+        raise PxygenError("No folders to process after filtering.")
 
     plan = build_resolve_execution_plan(
         organized,
@@ -345,7 +344,7 @@ def process_directory_mode(
 
     footage_dir = Path(footage_path)
     if not footage_dir.exists():
-        raise ProxyGeneratorError(f"Footage folder does not exist: {footage_path}")
+        raise PxygenError(f"Footage folder does not exist: {footage_path}")
     footage_depth = len(path_parts(footage_path))
     in_depth_spec = _normalize_depth(footage_depth, in_depth)
     out_depth_spec = _normalize_depth(footage_depth, out_depth)
@@ -368,7 +367,7 @@ def process_directory_mode(
     )
 
     if not input_depth_folders:
-        raise ProxyGeneratorError(
+        raise PxygenError(
             f"No folders found at depth {in_depth} inside '{footage_path}'"
         )
 
@@ -448,14 +447,14 @@ def process_directory_mode(
             available = sorted(Path(fp).name for fp in targets_by_input)
             logger.warning("No matching folders found for filter: %s", filter_list)
             logger.warning("Available: %s", ", ".join(available))
-            raise ProxyGeneratorError(
+            raise PxygenError(
                 f"No matching folders found for filter: {' '.join(filter_names)}"
             )
         targets_by_input = filtered
         logger.debug("Directory mode filter %r kept %d input folder(s)", filter_list, len(filtered))
 
     if not targets_by_input:
-        raise ProxyGeneratorError("No folders to process after filtering.")
+        raise PxygenError("No folders to process after filtering.")
 
     all_target_folders: list[str] = [
         folder for targets in targets_by_input.values() for folder in targets

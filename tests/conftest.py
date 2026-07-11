@@ -1,8 +1,8 @@
 """Pytest configuration for the test suite.
 
-DaVinciResolveScript is mocked here as a precaution, but after the refactor
-it is only imported lazily inside process_files_in_resolve(), so unit tests for
-paths / organize / resolve (pure functions) don't need the mock at all.
+DaVinciResolveScript is mocked here as a precaution, but it is only imported
+lazily inside _connect_to_resolve(), so unit tests for paths / organize /
+resolve (pure functions) don't need the mock at all.
 """
 import sys
 from unittest.mock import MagicMock

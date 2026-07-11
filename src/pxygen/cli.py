@@ -12,7 +12,7 @@ from . import __version__
 from .modes import process_directory_mode, process_json_mode
 from .paths import clean_path_input, is_json_file
 from .presenter import ConsolePresenter, UserAbort
-from .resolve import ProxyGeneratorError
+from .resolve import PxygenError
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +155,7 @@ def main() -> None:
     except UserAbort as exc:
         presenter.show(str(exc) or "Aborted.")
         sys.exit(0)
-    except ProxyGeneratorError as exc:
+    except PxygenError as exc:
         logger.error("%s", exc)
         sys.exit(1)
     except ValueError as exc:
