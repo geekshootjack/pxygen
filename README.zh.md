@@ -24,9 +24,7 @@ pxygen 将素材导入 DaVinci Resolve，按照文件夹层级自动建立媒体
 
 ## 环境变量配置
 
-标准安装的 Resolve **无需任何配置**——pxygen 会自动探测各平台的标准脚本路径
-（macOS 标准版和 App Store Studio 版、Windows、Linux），并自行处理
-`sys.path` 和 DLL 查找。
+标准安装的 Resolve **无需任何配置**——pxygen 会自动探测各平台的标准脚本路径（macOS 标准版和 App Store Studio 版、Windows、Linux），并自行处理 `sys.path` 和 DLL 查找。
 
 只有 Resolve 装在非标准路径时才需要手动指定：
 
@@ -59,18 +57,14 @@ uvx --from git+https://github.com/geekshootjack/pxygen pxygen -i ... -o ...
 
 ### 离线安装
 
-对于连不上 GitHub 的电脑：在任何一台能联网的机器上从
-[Releases 页面](https://github.com/geekshootjack/pxygen/releases)下载 `.whl`
-文件，用 U 盘或局域网拷过去，然后：
+对于连不上 GitHub 的电脑：在任何一台能联网的机器上从 [Releases 页面](https://github.com/geekshootjack/pxygen/releases)下载 `.whl` 文件，用 U 盘或局域网拷过去，然后：
 
 ```sh
 uv tool install ./pxygen-3.0.0-py3-none-any.whl
 uv tool install --force ./pxygen-4.0.0-py3-none-any.whl   # 升级到新版 wheel
 ```
 
-目标机器上仍需装有 [uv](https://docs.astral.sh/uv/) 和官方 python.org 版
-Python。完整的从零离线部署清单（U 盘带齐 Python + uv + pxygen + Resolve
-预设）见 **[docs/installation.md](docs/installation.md)**。
+目标机器上仍需装有 [uv](https://docs.astral.sh/uv/) 和官方 python.org 版 Python。完整的从零离线部署清单（U 盘带齐 Python + uv + pxygen + Resolve 预设）见 **[docs/installation.md](docs/installation.md)**。
 
 开发环境：
 

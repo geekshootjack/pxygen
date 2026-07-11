@@ -24,9 +24,7 @@ pxygen imports your footage into DaVinci Resolve, organises it into bins that mi
 
 ## Environment Setup
 
-None needed for standard Resolve installs — pxygen probes the well-known
-scripting locations on macOS (standard and App Store Studio), Windows, and
-Linux, and configures `sys.path` and DLL lookup by itself.
+None needed for standard Resolve installs — pxygen probes the well-known scripting locations on macOS (standard and App Store Studio), Windows, and Linux, and configures `sys.path` and DLL lookup by itself.
 
 Only if Resolve lives at a non-standard path, point pxygen at it:
 
@@ -59,19 +57,14 @@ uvx --from git+https://github.com/geekshootjack/pxygen pxygen -i ... -o ...
 
 ### Offline install (no GitHub access)
 
-For machines that cannot reach GitHub: download the `.whl` from the
-[Releases page](https://github.com/geekshootjack/pxygen/releases) on any
-connected machine, copy it over (USB drive, LAN share), then:
+For machines that cannot reach GitHub: download the `.whl` from the [Releases page](https://github.com/geekshootjack/pxygen/releases) on any connected machine, copy it over (USB drive, LAN share), then:
 
 ```sh
 uv tool install ./pxygen-3.0.0-py3-none-any.whl
 uv tool install --force ./pxygen-4.0.0-py3-none-any.whl   # upgrade to a newer wheel
 ```
 
-The machine still needs [uv](https://docs.astral.sh/uv/) and an official
-python.org build installed. For a complete from-zero offline bootstrap
-(Python + uv + pxygen + Resolve presets on a USB drive), see
-**[docs/installation.md](docs/installation.md)**.
+The machine still needs [uv](https://docs.astral.sh/uv/) and an official python.org build installed. For a complete from-zero offline bootstrap (Python + uv + pxygen + Resolve presets on a USB drive), see **[docs/installation.md](docs/installation.md)**.
 
 For development:
 
@@ -101,12 +94,12 @@ A typical footage layout:
 ```
 <project>/
 ├── Footage/
-│   ├── <shooting day>/          # 260710
-│   │   └── <camera type>/       # multicam, documentary
-│   │       └── <camera unit>/   # FX3#1, FX6#2
+│   ├── <shooting_day>/          # 260710
+│   │   └── <camera_type>/       # multicam, documentary
+│   │       └── <camera_unit>/   # FX3#1, FX6#2
 │   └── <...>/
 └── Proxy/
-    └── <shooting day>/
+    └── <shooting_day>/
 ```
 
 ## Documentation
