@@ -151,7 +151,7 @@ class TestProcessJsonMode:
         test failing is the early warning that the pxygen parser needs
         to follow.
         """
-        fixture = Path(__file__).parent / "fixtures" / "fcmp_report.json"
+        fixture = Path(__file__).parent / "fixtures" / "fcmp_20260713_171439.json"
 
         with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
             process_json_mode(str(fixture), "/proxy", 1, 1, 1)
