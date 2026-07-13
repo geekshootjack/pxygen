@@ -140,12 +140,17 @@ class FakeMediaPool:
 
 class FakeMediaStorage:
     def __init__(self, imports):
-        self.imports = imports
+        # imports maps tuple(items) -> [clips]; flatten to per-item lookup so
+        # the fake serves both whole-batch and one-item-at-a-time calls
         self.calls: list[list[str]] = []
+        self._clip_by_item: dict[str, FakeClip] = {}
+        for key, clips in imports.items():
+            for item, clip in zip(key, clips):
+                self._clip_by_item[item] = clip
 
     def AddItemListToMediaPool(self, items):
         self.calls.append(list(items))
-        return self.imports.get(tuple(items), [])
+        return [self._clip_by_item[i] for i in items if i in self._clip_by_item]
 
 
 class FakeProject:
@@ -303,7 +308,7 @@ class TestProcessFilesInResolve:
             codec="h265",
         )
 
-        assert media_storage.calls == [filtered_items]
+        assert media_storage.calls == [[item] for item in filtered_items]
         assert project_manager.saved is True
         assert project.render_job_count == 1
         assert [timeline.name for timeline in media_pool.timelines] == ["0001-3840x2160"]
@@ -342,7 +347,7 @@ class TestProcessFilesInResolve:
             codec="h265",
         )
 
-        assert media_storage.calls == [filtered_items]
+        assert media_storage.calls == [[item] for item in filtered_items]
         assert project_manager.saved is True
         assert project.render_job_count == 1
         assert [timeline.name for timeline in media_pool.timelines] == ["0001-3840x2160"]
@@ -541,17 +546,16 @@ class TestProcessFilesInResolve:
         assert [timeline.name for timeline in media_pool.timelines] == ["0001-1920x1080"]
         assert all(timeline.name != "0001-" for timeline in media_pool.timelines)
 
-    def test_imports_items_in_chunks(self, monkeypatch):
+    def test_imports_items_one_at_a_time_with_progress(self, monkeypatch):
         items = ["/source/a.mov", "/source/b.mov", "/source/c.mov"]
         imports = {
-            ("/source/a.mov", "/source/b.mov"): [
+            tuple(items): [
+                FakeClip("3840x2160", "2"),
                 FakeClip("3840x2160", "2"),
                 FakeClip("3840x2160", "2"),
             ],
-            ("/source/c.mov",): [FakeClip("3840x2160", "2")],
         }
         _, project, media_pool = _install_fake_resolve(monkeypatch, imports)
-        monkeypatch.setattr("pxygen.resolve._IMPORT_CHUNK_SIZE", 2)
         output_lines: list[str] = []
 
         _process(
@@ -564,12 +568,13 @@ class TestProcessFilesInResolve:
             confirm_render=lambda: False,
         )
 
-        # both chunks imported and merged into one render job
+        # every item imported individually, merged into one render job
         assert project.render_job_count == 1
         assert len(media_pool.timelines[0].clips) == 3
         output_text = "\n".join(output_lines)
-        assert "imported 2/3" in output_text
-        assert "imported 3/3" in output_text
+        assert "imported 1/3  a.mov" in output_text
+        assert "imported 2/3  b.mov" in output_text
+        assert "imported 3/3  c.mov" in output_text
 
     def _fresh_load_setup(self, monkeypatch, imports):
         """Simulate a first-time fusionscript load with the fake module."""

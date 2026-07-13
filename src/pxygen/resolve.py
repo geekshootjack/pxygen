@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from .paths import path_name
 from .plan import ResolveExecutionPlan
 from .presenter import ConsolePresenter, OutputFn, UserAbort
 
@@ -42,11 +43,6 @@ _MEDIA_IMPORT_SUFFIXES = {
 # Centered layout (clip name top, timecode below it) that fits both landscape
 # and portrait proxies; exported copy lives in presets/burn-in-vertical.xml
 _BURN_IN_PRESET = "burn-in-vertical"
-
-# Import media in chunks: keeps each AddItemListToMediaPool transaction small,
-# isolates failures to one chunk instead of the whole batch, and lets the TUI
-# show progress during long imports.
-_IMPORT_CHUNK_SIZE = 100
 
 class PxygenError(Exception):
     """Raised for expected, user-facing errors in proxy generation."""
@@ -415,31 +411,28 @@ def _filter_import_items(items: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(filtered_items)
 
 
-def _import_items_chunked(
+def _import_items(
     context: _ResolveContext,
     items: tuple[str, ...],
     output: OutputFn,
 ) -> list:
-    """Import *items* through AddItemListToMediaPool in fixed-size chunks."""
+    """Import *items* one at a time.
+
+    Per-item calls keep the TUI progress honest during long imports and
+    let a failed import name the exact file instead of a batch range.
+    """
     imported: list = []
     total = len(items)
-    show_progress = total > _IMPORT_CHUNK_SIZE
-    for start in range(0, total, _IMPORT_CHUNK_SIZE):
-        chunk = list(items[start:start + _IMPORT_CHUNK_SIZE])
-        clips = context.media_storage.AddItemListToMediaPool(chunk)
+    for index, item in enumerate(items, 1):
+        clips = context.media_storage.AddItemListToMediaPool([item])
         if clips:
             imported.extend(clips)
         else:
             # Distinguish "nothing imported" from "Resolve died mid-import"
             _ensure_resolve_alive(context)
-            logger.warning(
-                "Import returned no clips for chunk of %d item(s) (%s .. %s)",
-                len(chunk),
-                chunk[0],
-                chunk[-1],
-            )
-        if show_progress:
-            output(f"    imported {min(start + _IMPORT_CHUNK_SIZE, total)}/{total}")
+            logger.warning("Import returned no clips for %s", item)
+        if total > 1:
+            output(f"    imported {index}/{total}  {path_name(item)}")
     return imported
 
 
@@ -687,7 +680,7 @@ def execute_resolve_plan(
                     f"  Importing {len(items_to_import)} item(s) into Resolve"
                     " (may take a while)..."
                 )
-                imported_clips = _import_items_chunked(context, items_to_import, output)
+                imported_clips = _import_items(context, items_to_import, output)
                 if not imported_clips:
                     logger.warning(
                         "Failed to import items from %s",
