@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 
-from .paths import compute_key_path, path_parts, subfolder_key_from_parts
+from .paths import compute_key_path, path_name, path_parts, subfolder_key_from_parts
 
 
 @dataclass(frozen=True)
@@ -136,7 +135,7 @@ def filter_folders_at_in_depth(
 
     # Build name → full_path mapping (last path component as display name)
     folder_map: dict[str, str] = {
-        Path(key_path).name: key_path for key_path in organized_files
+        path_name(key_path): key_path for key_path in organized_files
     }
     return {
         folder_map[n]: organized_files[folder_map[n]]

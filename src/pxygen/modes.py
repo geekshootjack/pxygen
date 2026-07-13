@@ -21,7 +21,7 @@ from .organize import (
     parse_selection,
     select_folders_at_in_depth,
 )
-from .paths import format_path_parts, path_parts
+from .paths import format_path_parts, path_name, path_parts
 from .plan import build_resolve_execution_plan
 from .presenter import InputFn, OutputFn, output_kv, output_numbered, prompt_line
 from .resolve import PxygenError, execute_resolve_plan
@@ -86,7 +86,7 @@ def _folder_labels(paths: list[str]) -> list[str]:
     Leaf names are enough when they are unique; fall back to full paths
     when two folders share a name.
     """
-    names = [Path(path).name for path in paths]
+    names = [path_name(path) for path in paths]
     if len(set(names)) != len(names):
         return list(paths)
     return names
@@ -288,7 +288,7 @@ def process_json_mode(
         organized_before_filter = organized
         organized = filter_folders_at_in_depth(organized, filter_list)
         if not organized:
-            available = ", ".join(sorted(Path(k).name for k in organized_before_filter))
+            available = ", ".join(sorted(path_name(k) for k in organized_before_filter))
             logger.warning("No matching folders found for filter: %s", filter_list)
             logger.warning("Available folders: %s", available)
         else:
@@ -445,10 +445,10 @@ def process_directory_mode(
         filtered = {
             fp: targets
             for fp, targets in targets_by_input.items()
-            if Path(fp).name in filter_names
+            if path_name(fp) in filter_names
         }
         if not filtered:
-            available = sorted(Path(fp).name for fp in targets_by_input)
+            available = sorted(path_name(fp) for fp in targets_by_input)
             logger.warning("No matching folders found for filter: %s", filter_list)
             logger.warning("Available: %s", ", ".join(available))
             raise PxygenError(

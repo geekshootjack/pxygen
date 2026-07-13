@@ -41,6 +41,17 @@ def path_parts(path: str | Path) -> list[str]:
     return [first.rstrip("\\"), *parts[1:]]
 
 
+def path_name(path: str | Path) -> str:
+    """Return the last path component, handling Windows paths on any OS.
+
+    ``Path(...).name`` only understands the native separator; fcmp reports
+    written on Windows carry backslash paths that must still split
+    correctly when processed elsewhere.
+    """
+    parts = path_parts(path)
+    return parts[-1] if parts else ""
+
+
 def _looks_windows_path(path_str: str) -> bool:
     """Return True when *path_str* should use Windows path semantics."""
     return (len(path_str) >= 2 and path_str[1] == ":") or "\\" in path_str

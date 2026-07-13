@@ -7,8 +7,20 @@ from pxygen.paths import (
     clean_path_input,
     compute_key_path,
     is_json_file,
+    path_name,
     path_parts,
 )
+
+
+class TestPathName:
+    def test_windows_style_path_on_any_os(self):
+        assert path_name("H:\\Production\\Footage\\260613") == "260613"
+
+    def test_posix_style_path(self):
+        assert path_name("/Volumes/SSD/Footage/Day1") == "Day1"
+
+    def test_empty_string(self):
+        assert path_name("") == ""
 
 # ---------------------------------------------------------------------------
 # clean_path_input

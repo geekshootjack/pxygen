@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from .paths import split_subfolder_key
+from .paths import path_name, split_subfolder_key
 
 
 @dataclass(frozen=True)
@@ -48,7 +48,7 @@ def build_resolve_execution_plan(
     footage_folders: list[PlannedFootageFolder] = []
 
     for footage_folder_path in selected_footage_folders:
-        footage_folder_name = Path(footage_folder_path).name
+        footage_folder_name = path_name(footage_folder_path)
         batches: list[PlannedBatch] = []
 
         for subfolder_key, items in sorted(organized_files[footage_folder_path].items()):
