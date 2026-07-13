@@ -1,0 +1,21 @@
+{
+  "mode": "proxy",
+  "generated_at": "2026-07-13T17:14:39.672827",
+  "ignored": [],
+  "group_a": {
+    "directories": [
+      "H:\\Production\\Footage"
+    ]
+  },
+  "group_b": {
+    "directories": [
+      "H:\\Production\\Proxy"
+    ]
+  },
+  "unique_in_a": [
+    "H:\\Production\\Footage\\260613\\BPGM\\CARD#A\\AJA\\260613-BPGM_10.mov",
+    "H:\\Production\\Footage\\260613\\C_FX9\\C001\\XDROOT\\Clip\\260613_HL_C0006.MXF",
+    "H:\\Production\\Footage\\260614\\D_FX9\\D001\\XDROOT\\Clip\\260614_HL_D0001.MXF"
+  ],
+  "unique_in_b": []
+}
