@@ -10,7 +10,7 @@ pxygen 将素材导入 DaVinci Resolve，按照文件夹层级自动建立媒体
 
 ## 功能特性
 
-- **两种模式** — 直接从文件夹树导入，或基于 [File_Compare](https://github.com/UserProjekt/File_Compare) 的 JSON 结果重新生成缺失代理
+- **两种模式** — 直接从文件夹树导入，或基于 [fcmp](https://github.com/geekshootjack/fcmp) 的 JSON 报告重新生成缺失代理
 - **智能编码选择** — 音频通道 ≤ 4 用 H.265，> 4 用 ProRes Proxy（解决 Adobe Premiere 兼容性问题）
 - **文件夹筛选** — 交互式选择拍摄日（`--select`）或按名称过滤（`--filter`）
 - **跨平台支持** — Windows、macOS
@@ -81,8 +81,8 @@ uv run pxygen --help
 # 目录模式——导入素材并生成代理
 pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5
 
-# JSON 模式——基于 File_Compare 结果重新生成缺失代理
-pxygen -i comparison.json -o /Volumes/SSD/Proxy -g 1 -n 4 -d 5
+# JSON 模式——基于 fcmp 报告重新生成缺失代理
+pxygen -i fcmp_report.json -o /Volumes/SSD/Proxy -g 1 -n 4 -d 5
 
 # 只处理特定拍摄日
 pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 \

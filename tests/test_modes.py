@@ -17,18 +17,18 @@ from pxygen.resolve import PxygenError
 
 
 class TestProcessJsonMode:
-    def test_merges_selected_dataset_and_frame_mismatches(self, tmp_path):
+    def test_merges_selected_side_and_frame_mismatches(self, tmp_path):
         json_path = tmp_path / "comparison.json"
         json_path.write_text(
             json.dumps(
                 {
-                    "files_only_in_group2": [
+                    "unique_in_b": [
                         "/Volumes/SSD/Footage/Day2/CamA/clip1.mov",
                     ],
-                    "frame_count_mismatches": [
+                    "frame_mismatches": [
                         {
-                            "path1": "/unused/group1.mov",
-                            "path2": "/Volumes/SSD/Footage/Day2/CamB/clip2.mov",
+                            "path_a": "/unused/side-a.mov",
+                            "path_b": "/Volumes/SSD/Footage/Day2/CamB/clip2.mov",
                         }
                     ],
                 }
@@ -66,7 +66,7 @@ class TestProcessJsonMode:
         json_path.write_text(
             json.dumps(
                 {
-                    "files_only_in_group1": [
+                    "unique_in_a": [
                         "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
                         "/Volumes/SSD/Footage/Day2/CamA/clip2.mov",
                     ]
@@ -94,7 +94,7 @@ class TestProcessJsonMode:
         json_path.write_text(
             json.dumps(
                 {
-                    "files_only_in_group1": [
+                    "unique_in_a": [
                         "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
                     ]
                 }
@@ -118,7 +118,7 @@ class TestProcessJsonMode:
         json_path.write_text(
             json.dumps(
                 {
-                    "files_only_in_group1": [
+                    "unique_in_a": [
                         "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
                     ]
                 }
@@ -139,16 +139,29 @@ class TestProcessJsonMode:
 
         output_text = "\n".join(output_lines)
         assert "JSON mode" in output_text
-        assert "dataset" in output_text
-        assert "group1" in output_text
+        assert "unique_in_a" in output_text
         assert "files" in output_text
+
+    def test_legacy_file_compare_report_is_rejected(self, tmp_path):
+        json_path = tmp_path / "comparison.json"
+        json_path.write_text(
+            json.dumps(
+                {
+                    "files_only_in_group1": ["/Volumes/SSD/Footage/Day1/CamA/clip1.mov"],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(PxygenError, match="legacy File_Compare"):
+            process_json_mode(str(json_path), "/proxy", 1, 1, 2)
 
     def test_defaults_to_console_output_instead_of_logger_info(self, tmp_path):
         json_path = tmp_path / "comparison.json"
         json_path.write_text(
             json.dumps(
                 {
-                    "files_only_in_group1": [
+                    "unique_in_a": [
                         "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
                     ]
                 }
@@ -175,7 +188,7 @@ class TestProcessJsonMode:
         json_path.write_text(
             json.dumps(
                 {
-                    "files_only_in_group1": [
+                    "unique_in_a": [
                         "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
                         "/Volumes/SSD/Footage/Day1/CamA/clip2.mov",
                     ]
@@ -201,7 +214,7 @@ class TestProcessJsonMode:
         json_path.write_text(
             json.dumps(
                 {
-                    "files_only_in_group1": [
+                    "unique_in_a": [
                         "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
                         "/Volumes/SSD/Footage/Day1/CamB/clip2.mov",
                         "/Volumes/SSD/Footage/Day2/CamA/clip3.mov",

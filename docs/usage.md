@@ -18,10 +18,10 @@ pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 1 -d 2
 
 ### JSON Mode
 
-Re-generates missing or incomplete proxies using file paths from a [File_Compare](https://github.com/UserProjekt/File_Compare) JSON result.
+Re-generates missing or incomplete proxies using file paths from an [fcmp](https://github.com/geekshootjack/fcmp) JSON report (`unique_in_a` / `unique_in_b`, plus `frame_mismatches` in proxy-frames mode).
 
 ```sh
-pxygen -i comparison.json -o /Volumes/SSD/Proxy -g 1 -n 1 -d 2
+pxygen -i fcmp_report.json -o /Volumes/SSD/Proxy -g 1 -n 1 -d 2
 ```
 
 ---
@@ -32,7 +32,7 @@ pxygen -i comparison.json -o /Volumes/SSD/Proxy -g 1 -n 1 -d 2
 
 | Flag | Description |
 |------|-------------|
-| `-i, --input PATH` | Footage root folder or File_Compare JSON file |
+| `-i, --input PATH` | Footage root folder or fcmp JSON report |
 | `-o, --output PATH` | Proxy output root folder |
 
 ### Depth Control
@@ -84,7 +84,7 @@ already-queued jobs stay in the saved Resolve project.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `-g, --group {1,2}` | `1` | Which group to use from the comparison JSON |
+| `-g, --group {1,2}` | `1` | fcmp side to render: 1 = `unique_in_a`, 2 = `unique_in_b` |
 
 ### Render Options
 
@@ -120,8 +120,8 @@ pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 1 -d 2 -k prores
 pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 1 -d 2 \
   --filter Shooting_Day_3 Shooting_Day_4
 
-# JSON mode, group 2, interactive selection
-pxygen -i comparison.json -o /Volumes/SSD/Proxy -g 2 -n 1 -d 2 --select
+# JSON mode, side B, interactive selection
+pxygen -i fcmp_report.json -o /Volumes/SSD/Proxy -g 2 -n 1 -d 2 --select
 ```
 
 ---

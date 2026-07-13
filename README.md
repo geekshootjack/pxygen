@@ -10,7 +10,7 @@ pxygen imports your footage into DaVinci Resolve, organises it into bins that mi
 
 ## Features
 
-- **Two modes** — import directly from a folder tree, or re-generate missing proxies from a [File_Compare](https://github.com/UserProjekt/File_Compare) JSON
+- **Two modes** — import directly from a folder tree, or re-generate missing proxies from an [fcmp](https://github.com/geekshootjack/fcmp) JSON report
 - **Smart codec selection** — H.265 for ≤ 4 audio channels, ProRes Proxy for > 4 (Adobe Premiere compatibility)
 - **Folder filtering** — process specific shooting days interactively (`--select`) or by name (`--filter`)
 - **Cross-platform** — Windows, macOS
@@ -81,8 +81,8 @@ uv run pxygen --help
 # Directory mode — import footage and generate proxies
 pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5
 
-# JSON mode — re-generate missing proxies from a File_Compare result
-pxygen -i comparison.json -o /Volumes/SSD/Proxy -g 1 -n 4 -d 5
+# JSON mode — re-generate missing proxies from an fcmp report
+pxygen -i fcmp_report.json -o /Volumes/SSD/Proxy -g 1 -n 4 -d 5
 
 # Process only specific shooting days
 pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 \

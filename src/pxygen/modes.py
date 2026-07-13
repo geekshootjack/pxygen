@@ -175,12 +175,13 @@ def process_json_mode(
     output: OutputFn | None = None,
     confirm_render: Callable[[], bool] | None = None,
 ) -> None:
-    """Re-generate missing proxies from a file-comparison JSON produced by File_Compare.
+    """Re-generate missing proxies from a comparison JSON produced by fcmp.
 
     Args:
-        json_path: Path to the JSON comparison file.
+        json_path: Path to the fcmp JSON report.
         proxy_path: Root output directory for proxies.
-        dataset: Which group to use from the comparison (1 or 2).
+        dataset: Which comparison side to use: 1 = ``unique_in_a``,
+            2 = ``unique_in_b``.
         in_depth: Folder level relative to the inferred footage root.
         out_depth: Batch level relative to the inferred footage root.
         filter_mode: ``'select'`` or ``'filter'`` or ``None``.
@@ -208,27 +209,30 @@ def process_json_mode(
         raise PxygenError(f"Error reading JSON file: {exc}") from exc
     logger.debug("Loaded comparison JSON from %s", json_path)
 
-    file_list: list[str] = list(comparison_data.get(f"files_only_in_group{dataset}", []))
-
-    # Also include files with frame-count mismatches
-    if "frame_count_mismatches" in comparison_data:
-        path_key = f"path{dataset}"
-        mismatch_files = [m[path_key] for m in comparison_data["frame_count_mismatches"]]
-        file_list.extend(mismatch_files)
-        output(f"Added {len(mismatch_files)} files from frame count mismatches (group {dataset})")
-        logger.info(
-            "Added %d frame-count mismatch file(s) for dataset=%d",
-            len(mismatch_files),
-            dataset,
+    if "files_only_in_group1" in comparison_data or "files_only_in_group2" in comparison_data:
+        raise PxygenError(
+            "This looks like a legacy File_Compare report; pxygen reads fcmp"
+            " JSON reports (unique_in_a / unique_in_b). Re-run the comparison"
+            " with fcmp."
         )
-        logger.debug(
-            "Merged %d frame-count mismatch file(s) into dataset %s",
+
+    side = "a" if dataset == 1 else "b"
+    file_list: list[str] = list(comparison_data.get(f"unique_in_{side}", []))
+
+    # Also include files whose proxy exists but has a mismatched frame count
+    if "frame_mismatches" in comparison_data:
+        path_key = f"path_{side}"
+        mismatch_files = [m[path_key] for m in comparison_data["frame_mismatches"]]
+        file_list.extend(mismatch_files)
+        output(f"Added {len(mismatch_files)} file(s) from frame mismatches (side {side})")
+        logger.info(
+            "Added %d frame-mismatch file(s) for side %s",
             len(mismatch_files),
-            dataset,
+            side,
         )
 
     if not file_list:
-        raise PxygenError(f"No files found in group{dataset}")
+        raise PxygenError(f"No files found in unique_in_{side}")
 
     root_depth = _infer_json_root_depth(file_list, out_depth)
     in_depth_spec = _normalize_depth(root_depth, in_depth)
@@ -236,10 +240,10 @@ def process_json_mode(
     if out_depth_spec.resolved < in_depth_spec.resolved:
         raise ValueError("Output depth must be ≥ input depth")
 
-    logger.info("Found %d file(s) in group%d", len(file_list), dataset)
+    logger.info("Found %d file(s) in unique_in_%s", len(file_list), side)
     summary_rows: list[tuple[str, object]] = [
         ("json file", json_path),
-        ("dataset", f"group{dataset}"),
+        ("side", f"unique_in_{side}"),
         ("depths", f"in {in_depth_spec.requested} / out {out_depth_spec.requested}"),
         ("files", len(file_list)),
     ]

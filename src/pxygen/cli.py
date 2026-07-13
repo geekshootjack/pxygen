@@ -78,7 +78,7 @@ def _build_parser():
     parser.add_argument(
         "-g", "--group",
         type=int, choices=[1, 2], default=1,
-        help="JSON mode: which comparison group to use",
+        help="JSON mode: fcmp side to render (1 = unique_in_a, 2 = unique_in_b)",
     )
 
     selection_group = parser.add_mutually_exclusive_group()
