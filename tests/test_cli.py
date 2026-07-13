@@ -22,6 +22,13 @@ class TestParser:
         assert args.input == "/footage"
         assert args.output == "/proxy"
 
+    def test_version_flag_prints_version_and_exits(self, capsys):
+        for flag in ("-v", "-V", "--version"):
+            with pytest.raises(SystemExit) as exc_info:
+                self._parse([flag])
+            assert exc_info.value.code == 0
+        assert "pxygen v" in capsys.readouterr().out
+
     def test_long_input_output(self):
         args = self._parse(["--input", "/footage", "--output", "/proxy"])
         assert args.input == "/footage"

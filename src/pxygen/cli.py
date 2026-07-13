@@ -63,6 +63,10 @@ def _build_parser():
         ),
     )
 
+    parser.add_argument(
+        "-v", "-V", "--version",
+        action="version", version=f"pxygen v{__version__}",
+    )
     parser.add_argument("-i", "--input", help="Footage folder or JSON comparison file")
     parser.add_argument("-o", "--output", help="Proxy output folder")
     parser.add_argument(
