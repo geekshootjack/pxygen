@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -141,6 +142,29 @@ class TestProcessJsonMode:
         assert "JSON mode" in output_text
         assert "unique_in_a" in output_text
         assert "files" in output_text
+
+    def test_parses_golden_fcmp_report_fixture(self):
+        """Contract test against a real fcmp-generated report.
+
+        The fixture mirrors fcmp's actual JSON export (sanitized paths).
+        If fcmp changes its report format, regenerate the fixture — this
+        test failing is the early warning that the pxygen parser needs
+        to follow.
+        """
+        fixture = Path(__file__).parent / "fixtures" / "fcmp_report.json"
+
+        with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
+            process_json_mode(str(fixture), "/proxy", 1, 1, 1)
+
+        plan = mock_execute.call_args.args[0]
+        assert [folder.footage_folder_name for folder in plan.footage_folders] == [
+            "260613",
+            "260614",
+        ]
+        day1_items = [
+            item for batch in plan.footage_folders[0].batches for item in batch.items
+        ]
+        assert len(day1_items) == 2
 
     def test_legacy_file_compare_report_is_rejected(self, tmp_path):
         json_path = tmp_path / "comparison.json"
