@@ -57,7 +57,7 @@ def _build_parser():
         epilog=(
             "Examples:\n"
             "  pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy\n"
-            "  pxygen -i comparison.json -o /Volumes/SSD/Proxy --group 2\n"
+            "  pxygen -i fcmp_report.json -o /Volumes/SSD/Proxy --group b\n"
             "  pxygen -i /Volumes/SSD/Footage -o /Proxy --select\n"
             "  pxygen -i /Volumes/SSD/Footage -o /Proxy --filter Day1 Day2\n"
         ),
@@ -81,8 +81,8 @@ def _build_parser():
     )
     parser.add_argument(
         "-g", "--group",
-        type=int, choices=[1, 2], default=1,
-        help="JSON mode: fcmp side to render (1 = unique_in_a, 2 = unique_in_b)",
+        choices=["a", "b"], default="a",
+        help="JSON mode: fcmp side to render (a = unique_in_a, b = unique_in_b)",
     )
 
     selection_group = parser.add_mutually_exclusive_group()

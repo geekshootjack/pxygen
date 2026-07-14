@@ -43,12 +43,12 @@ class TestParser:
         assert args.out_depth == 6
 
     def test_group_short(self):
-        args = self._parse(["-i", "comp.json", "-o", "/p", "-g", "2"])
-        assert args.group == 2
+        args = self._parse(["-i", "comp.json", "-o", "/p", "-g", "b"])
+        assert args.group == "b"
 
     def test_group_invalid_raises(self):
         with pytest.raises(SystemExit):
-            self._parse(["-i", "comp.json", "-o", "/p", "-g", "3"])
+            self._parse(["-i", "comp.json", "-o", "/p", "-g", "c"])
 
     def test_filter_short(self):
         # comma-joined tokens are tolerated; parser passes them through raw
@@ -75,7 +75,7 @@ class TestParser:
         args = self._parse(["-i", "/f", "-o", "/p"])
         assert args.in_depth == 1
         assert args.out_depth == 1
-        assert args.group == 1
+        assert args.group == "a"
         assert args.codec == "auto"
         assert args.log_level == "warning"
         assert args.select is False
@@ -203,9 +203,9 @@ class TestDispatch:
     def test_group_passed_to_json_mode(self, tmp_path):
         json_path = "/nonexistent/comp.json"
         with patch(_MOCK_JSON) as mock_json:
-            self._run(["-i", json_path, "-o", "/proxy", "-g", "2"])
+            self._run(["-i", json_path, "-o", "/proxy", "-g", "b"])
             _, call_kwargs = mock_json.call_args
-            assert mock_json.call_args[0][2] == 2  # group is 3rd positional arg
+            assert mock_json.call_args[0][2] == "b"  # side is 3rd positional arg
 
     def test_codec_passed_through(self, tmp_path):
         footage = tmp_path / "footage"

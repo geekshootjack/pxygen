@@ -82,7 +82,7 @@ uv run pxygen --help
 pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5
 
 # JSON 模式——基于 fcmp 报告重新生成缺失代理
-pxygen -i fcmp_report.json -o /Volumes/SSD/Proxy -g 1 -n 4 -d 5
+pxygen -i fcmp_report.json -o /Volumes/SSD/Proxy -g a -n 4 -d 5
 
 # 只处理特定拍摄日
 pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 \

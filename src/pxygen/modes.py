@@ -164,7 +164,7 @@ def _collect_directory_tree(root: Path) -> list[Path]:
 def process_json_mode(
     json_path: str,
     proxy_path: str,
-    dataset: int,
+    side: str,
     in_depth: int,
     out_depth: int,
     *,
@@ -180,8 +180,8 @@ def process_json_mode(
     Args:
         json_path: Path to the fcmp JSON report.
         proxy_path: Root output directory for proxies.
-        dataset: Which comparison side to use: 1 = ``unique_in_a``,
-            2 = ``unique_in_b``.
+        side: Which comparison side to use: ``'a'`` = ``unique_in_a``,
+            ``'b'`` = ``unique_in_b``.
         in_depth: Folder level relative to the inferred footage root.
         out_depth: Batch level relative to the inferred footage root.
         filter_mode: ``'select'`` or ``'filter'`` or ``None``.
@@ -192,16 +192,16 @@ def process_json_mode(
     output = output or print
     input_func = input_func or input
     logger.info(
-        "Running JSON mode json_path=%s proxy_path=%s dataset=%d in_depth=%d out_depth=%d",
+        "Running JSON mode json_path=%s proxy_path=%s side=%s in_depth=%d out_depth=%d",
         json_path,
         proxy_path,
-        dataset,
+        side,
         in_depth,
         out_depth,
     )
 
-    if dataset not in (1, 2):
-        raise PxygenError(f"Invalid dataset value '{dataset}'. Must be 1 or 2.")
+    if side not in ("a", "b"):
+        raise PxygenError(f"Invalid side value '{side}'. Must be 'a' or 'b'.")
 
     try:
         comparison_data: dict = json.loads(Path(json_path).read_text(encoding="utf-8"))
@@ -216,7 +216,6 @@ def process_json_mode(
             " with fcmp."
         )
 
-    side = "a" if dataset == 1 else "b"
     file_list: list[str] = list(comparison_data.get(f"unique_in_{side}", []))
 
     # Also include files whose proxy exists but has a mismatched frame count

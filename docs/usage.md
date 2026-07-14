@@ -21,7 +21,7 @@ pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 1 -d 2
 Re-generates missing or incomplete proxies using file paths from an [fcmp](https://github.com/geekshootjack/fcmp) JSON report (`unique_in_a` / `unique_in_b`, plus `frame_mismatches` in proxy-frames mode).
 
 ```sh
-pxygen -i fcmp_report.json -o /Volumes/SSD/Proxy -g 1 -n 1 -d 2
+pxygen -i fcmp_report.json -o /Volumes/SSD/Proxy -g a -n 1 -d 2
 ```
 
 ---
@@ -84,7 +84,7 @@ already-queued jobs stay in the saved Resolve project.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `-g, --group {1,2}` | `1` | fcmp side to render: 1 = `unique_in_a`, 2 = `unique_in_b` |
+| `-g, --group {a,b}` | `a` | fcmp side to render: a = `unique_in_a`, b = `unique_in_b` |
 
 ### Render Options
 
@@ -121,7 +121,7 @@ pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 1 -d 2 \
   --filter Shooting_Day_3 Shooting_Day_4
 
 # JSON mode, side B, interactive selection
-pxygen -i fcmp_report.json -o /Volumes/SSD/Proxy -g 2 -n 1 -d 2 --select
+pxygen -i fcmp_report.json -o /Volumes/SSD/Proxy -g b -n 1 -d 2 --select
 ```
 
 ---

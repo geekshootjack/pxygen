@@ -41,7 +41,7 @@ class TestProcessJsonMode:
             process_json_mode(
                 str(json_path),
                 "/proxy",
-                2,
+                "b",
                 1,
                 2,
                 codec="prores",
@@ -80,7 +80,7 @@ class TestProcessJsonMode:
             process_json_mode(
                 str(json_path),
                 "/proxy",
-                1,
+                "a",
                 1,
                 2,
                 filter_mode="filter",
@@ -107,7 +107,7 @@ class TestProcessJsonMode:
             process_json_mode(
                 str(json_path),
                 "/proxy",
-                1,
+                "a",
                 1,
                 2,
                 filter_mode="filter",
@@ -132,7 +132,7 @@ class TestProcessJsonMode:
             process_json_mode(
                 str(json_path),
                 "/proxy",
-                1,
+                "a",
                 1,
                 2,
                 output=output_lines.append,
@@ -154,7 +154,7 @@ class TestProcessJsonMode:
         fixture = Path(__file__).parent / "fixtures" / "fcmp_20260713_171439.json"
 
         with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
-            process_json_mode(str(fixture), "/proxy", 1, 1, 1)
+            process_json_mode(str(fixture), "/proxy", "a", 1, 1)
 
         plan = mock_execute.call_args.args[0]
         assert [folder.footage_folder_name for folder in plan.footage_folders] == [
@@ -178,7 +178,7 @@ class TestProcessJsonMode:
         )
 
         with pytest.raises(PxygenError, match="legacy File_Compare"):
-            process_json_mode(str(json_path), "/proxy", 1, 1, 2)
+            process_json_mode(str(json_path), "/proxy", "a", 1, 2)
 
     def test_defaults_to_console_output_instead_of_logger_info(self, tmp_path):
         json_path = tmp_path / "comparison.json"
@@ -200,7 +200,7 @@ class TestProcessJsonMode:
             process_json_mode(
                 str(json_path),
                 "/proxy",
-                1,
+                "a",
                 1,
                 2,
             )
@@ -225,7 +225,7 @@ class TestProcessJsonMode:
             process_json_mode(
                 str(json_path),
                 "/proxy",
-                1,
+                "a",
                 1,
                 1,
             )
@@ -252,7 +252,7 @@ class TestProcessJsonMode:
             process_json_mode(
                 str(json_path),
                 "/proxy",
-                1,
+                "a",
                 1,
                 2,
             )

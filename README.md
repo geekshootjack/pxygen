@@ -82,7 +82,7 @@ uv run pxygen --help
 pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5
 
 # JSON mode — re-generate missing proxies from an fcmp report
-pxygen -i fcmp_report.json -o /Volumes/SSD/Proxy -g 1 -n 4 -d 5
+pxygen -i fcmp_report.json -o /Volumes/SSD/Proxy -g a -n 4 -d 5
 
 # Process only specific shooting days
 pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 4 -d 5 \
