@@ -23,6 +23,7 @@ class TestProcessJsonMode:
         json_path.write_text(
             json.dumps(
                 {
+                    "group_b": {"directories": ["/Volumes/SSD/Footage"]},
                     "unique_in_b": [
                         "/Volumes/SSD/Footage/Day2/CamA/clip1.mov",
                     ],
@@ -67,6 +68,7 @@ class TestProcessJsonMode:
         json_path.write_text(
             json.dumps(
                 {
+                    "group_a": {"directories": ["/Volumes/SSD/Footage"]},
                     "unique_in_a": [
                         "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
                         "/Volumes/SSD/Footage/Day2/CamA/clip2.mov",
@@ -95,6 +97,7 @@ class TestProcessJsonMode:
         json_path.write_text(
             json.dumps(
                 {
+                    "group_a": {"directories": ["/Volumes/SSD/Footage"]},
                     "unique_in_a": [
                         "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
                     ]
@@ -119,6 +122,7 @@ class TestProcessJsonMode:
         json_path.write_text(
             json.dumps(
                 {
+                    "group_a": {"directories": ["/Volumes/SSD/Footage"]},
                     "unique_in_a": [
                         "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
                     ]
@@ -185,6 +189,7 @@ class TestProcessJsonMode:
         json_path.write_text(
             json.dumps(
                 {
+                    "group_a": {"directories": ["/Volumes/SSD/Footage"]},
                     "unique_in_a": [
                         "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
                     ]
@@ -207,11 +212,14 @@ class TestProcessJsonMode:
 
         assert mock_print.called
 
-    def test_single_parent_json_still_groups_by_parent_folder(self, tmp_path):
+    def test_grouping_is_relative_to_report_root_not_file_parents(self, tmp_path):
+        """Depth 1 means one level below the report's group root, even when
+        every file shares a deeper common parent."""
         json_path = tmp_path / "comparison.json"
         json_path.write_text(
             json.dumps(
                 {
+                    "group_a": {"directories": ["/Volumes/SSD/Footage"]},
                     "unique_in_a": [
                         "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
                         "/Volumes/SSD/Footage/Day1/CamA/clip2.mov",
@@ -231,13 +239,14 @@ class TestProcessJsonMode:
             )
 
         plan = mock_execute.call_args.args[0]
-        assert [folder.footage_folder_name for folder in plan.footage_folders] == ["CamA"]
+        assert [folder.footage_folder_name for folder in plan.footage_folders] == ["Day1"]
 
-    def test_relative_depths_group_json_paths_from_common_root(self, tmp_path):
+    def test_relative_depths_group_json_paths_from_report_root(self, tmp_path):
         json_path = tmp_path / "comparison.json"
         json_path.write_text(
             json.dumps(
                 {
+                    "group_a": {"directories": ["/Volumes/SSD/Footage"]},
                     "unique_in_a": [
                         "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
                         "/Volumes/SSD/Footage/Day1/CamB/clip2.mov",
@@ -265,6 +274,87 @@ class TestProcessJsonMode:
         }
         assert sorted(day1_batches) == ["CamA", "CamB"]
         assert day1_batches["CamA"] == ["/Volumes/SSD/Footage/Day1/CamA/clip1.mov"]
+
+    def test_shallow_and_unmatched_files_are_warned_and_skipped(self, tmp_path):
+        """Files directly at the root (or outside it) must not drag the
+        grouping level up — they are reported and left out of the plan."""
+        json_path = tmp_path / "comparison.json"
+        json_path.write_text(
+            json.dumps(
+                {
+                    "group_a": {"directories": ["/Volumes/SSD/Footage"]},
+                    "unique_in_a": [
+                        "/Volumes/SSD/Footage/loose.mov",
+                        "/Elsewhere/orphan.mov",
+                        "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        output_lines: list[str] = []
+
+        with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
+            process_json_mode(
+                str(json_path),
+                "/proxy",
+                "a",
+                1,
+                1,
+                output=output_lines.append,
+            )
+
+        plan = mock_execute.call_args.args[0]
+        assert [folder.footage_folder_name for folder in plan.footage_folders] == ["Day1"]
+        output_text = "\n".join(output_lines)
+        assert "Warning" in output_text
+        assert "/Volumes/SSD/Footage/loose.mov" in output_text
+        assert "/Elsewhere/orphan.mov" in output_text
+
+    def test_report_without_group_directories_is_rejected(self, tmp_path):
+        json_path = tmp_path / "comparison.json"
+        json_path.write_text(
+            json.dumps(
+                {
+                    "unique_in_a": [
+                        "/Volumes/SSD/Footage/Day1/CamA/clip1.mov",
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(PxygenError, match="group_a"):
+            process_json_mode(str(json_path), "/proxy", "a", 1, 1)
+
+    def test_multiple_group_roots_group_independently(self, tmp_path):
+        json_path = tmp_path / "comparison.json"
+        json_path.write_text(
+            json.dumps(
+                {
+                    "group_a": {
+                        "directories": [
+                            "/Volumes/A/Footage",
+                            "/Volumes/B/Deep/More",
+                        ]
+                    },
+                    "unique_in_a": [
+                        "/Volumes/A/Footage/Day1/clip1.mov",
+                        "/Volumes/B/Deep/More/Day9/clip2.mov",
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with patch("pxygen.modes.execute_resolve_plan") as mock_execute:
+            process_json_mode(str(json_path), "/proxy", "a", 1, 1)
+
+        plan = mock_execute.call_args.args[0]
+        assert [folder.footage_folder_name for folder in plan.footage_folders] == [
+            "Day1",
+            "Day9",
+        ]
 
 
 class TestProcessDirectoryMode:

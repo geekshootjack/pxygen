@@ -35,43 +35,6 @@ class _DepthSpec:
     resolved: int
 
 
-def _common_parent_depth(paths: list[str]) -> int:
-    """Return the common leading path components across *paths*."""
-    if not paths:
-        return 0
-
-    prefix = list(path_parts(paths[0]))
-    for raw_path in paths[1:]:
-        parts = path_parts(raw_path)
-        max_common = min(len(prefix), len(parts))
-        common_length = 0
-        while common_length < max_common and prefix[common_length] == parts[common_length]:
-            common_length += 1
-        prefix = prefix[:common_length]
-        if not prefix:
-            break
-    return len(prefix)
-
-
-def _infer_json_root_depth(paths: list[str], out_depth: int) -> int:
-    """Infer a JSON root depth that preserves *out_depth* folder levels."""
-    if out_depth < 0:
-        raise ValueError("Depth values must be ≥ 0")
-
-    root_candidates: list[str] = []
-    for raw_path in paths:
-        parent_parts = path_parts(raw_path)[:-1]
-        if out_depth == 0:
-            root_parts = parent_parts
-        elif len(parent_parts) > out_depth:
-            root_parts = parent_parts[:-out_depth]
-        else:
-            root_parts = []
-        root_candidates.append(format_path_parts(root_parts))
-
-    return _common_parent_depth(root_candidates)
-
-
 def _normalize_depth(root_depth: int, depth: int) -> _DepthSpec:
     """Interpret *depth* as a level relative to the input root."""
     if depth < 0:
@@ -182,8 +145,10 @@ def process_json_mode(
         proxy_path: Root output directory for proxies.
         side: Which comparison side to use: ``'a'`` = ``unique_in_a``,
             ``'b'`` = ``unique_in_b``.
-        in_depth: Folder level relative to the inferred footage root.
-        out_depth: Batch level relative to the inferred footage root.
+        in_depth: Folder level relative to the footage root recorded in the
+            report (``group_a``/``group_b`` directories).
+        out_depth: Batch level relative to the footage root recorded in the
+            report.
         filter_mode: ``'select'`` or ``'filter'`` or ``None``.
         filter_list: Folder names to keep (only used when
             filter_mode == ``'filter'``).
@@ -233,47 +198,110 @@ def process_json_mode(
     if not file_list:
         raise PxygenError(f"No files found in unique_in_{side}")
 
-    root_depth = _infer_json_root_depth(file_list, out_depth)
-    in_depth_spec = _normalize_depth(root_depth, in_depth)
-    out_depth_spec = _normalize_depth(root_depth, out_depth)
-    if out_depth_spec.resolved < in_depth_spec.resolved:
+    if in_depth < 0 or out_depth < 0:
+        raise ValueError("Depth values must be ≥ 0")
+    if out_depth < in_depth:
         raise ValueError("Output depth must be ≥ input depth")
+
+    group_key = f"group_{side}"
+    root_dirs: list[str] = [
+        str(directory)
+        for directory in (comparison_data.get(group_key) or {}).get("directories", [])
+    ]
+    if not root_dirs:
+        raise PxygenError(
+            f"No footage root found in the report ({group_key}.directories is"
+            " missing or empty). Re-run the comparison with fcmp."
+        )
+
+    # Longest root first so a file under nested roots matches the deepest one.
+    root_parts_list = sorted(
+        (path_parts(directory) for directory in root_dirs), key=len, reverse=True
+    )
+
+    files_by_root: dict[tuple[str, ...], list[str]] = {}
+    shallow_files: list[str] = []
+    unmatched_files: list[str] = []
+    for file_path in file_list:
+        parts = path_parts(file_path)
+        root_parts = next(
+            (root for root in root_parts_list if parts[: len(root)] == root), None
+        )
+        if root_parts is None:
+            unmatched_files.append(file_path)
+            continue
+        if len(parts) <= len(root_parts) + in_depth:
+            shallow_files.append(file_path)
+            continue
+        files_by_root.setdefault(tuple(root_parts), []).append(file_path)
 
     logger.info("Found %d file(s) in unique_in_%s", len(file_list), side)
     summary_rows: list[tuple[str, object]] = [
         ("json file", json_path),
         ("side", f"unique_in_{side}"),
-        ("depths", f"in {in_depth_spec.requested} / out {out_depth_spec.requested}"),
+        ("root", ", ".join(root_dirs)),
+        ("depths", f"in {in_depth} / out {out_depth}"),
         ("files", len(file_list)),
     ]
-    if file_list:
-        example = file_list[0]
+    example_root = next(iter(files_by_root), None)
+    if example_root is not None:
+        example = files_by_root[example_root][0]
         parts = path_parts(example)
-        if len(parts) >= in_depth_spec.resolved:
-            if in_depth_spec.resolved == out_depth_spec.resolved:
-                summary_rows.extend(
-                    [
-                        ("example", example),
-                        ("folder name", parts[in_depth_spec.resolved - 1]),
-                    ]
-                )
-            else:
-                fragment_parts = parts[in_depth_spec.resolved - 1:out_depth_spec.resolved]
-                summary_rows.extend(
-                    [
-                        ("example", example),
-                        (
-                            "key fragment",
-                            format_path_parts(
-                                fragment_parts,
-                                windows=":" in example[:3] or "\\" in example,
-                            ),
+        key_end = len(example_root) + in_depth
+        if in_depth == out_depth:
+            summary_rows.extend(
+                [
+                    ("example", example),
+                    ("folder name", parts[key_end - 1]),
+                ]
+            )
+        else:
+            fragment_parts = parts[key_end - 1:len(example_root) + out_depth]
+            summary_rows.extend(
+                [
+                    ("example", example),
+                    (
+                        "key fragment",
+                        format_path_parts(
+                            fragment_parts,
+                            windows=":" in example[:3] or "\\" in example,
                         ),
-                    ]
-                )
+                    ),
+                ]
+            )
     output_kv("JSON mode", summary_rows, output)
 
-    organized = organize_json_mode_files(file_list, in_depth_spec.resolved, out_depth_spec.resolved)
+    skipped_groups = [
+        (f"outside the {group_key} directories", unmatched_files),
+        (
+            f"less than {in_depth} folder level(s) below the footage root"
+            f" (cannot group at -n {in_depth})",
+            shallow_files,
+        ),
+    ]
+    for reason, skipped in skipped_groups:
+        if not skipped:
+            continue
+        output(f"\nWarning: skipped {len(skipped)} file(s) {reason}:")
+        for file_path in skipped:
+            output(f"  {file_path}")
+        # info, not warning — the output() lines above already surface this
+        # to the user; warning level would print it twice on the console.
+        logger.info("Skipped %d file(s) %s: %s", len(skipped), reason, skipped)
+
+    # Keys from different roots can never collide (they embed the root path),
+    # so a plain merge is safe.
+    organized: dict[str, dict[str, list[str]]] = {}
+    for root_parts_key, files in files_by_root.items():
+        organized.update(
+            organize_json_mode_files(
+                files,
+                len(root_parts_key) + in_depth,
+                len(root_parts_key) + out_depth,
+            )
+        )
+    if not organized:
+        raise PxygenError("No files could be grouped below the footage root.")
     logger.debug("JSON mode produced %d top-level folder group(s)", len(organized))
     if filter_mode == "select":
         options = describe_folders_at_in_depth(organized)

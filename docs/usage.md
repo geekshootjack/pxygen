@@ -20,6 +20,8 @@ pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy -n 1 -d 2
 
 Re-generates missing or incomplete proxies using file paths from an [fcmp](https://github.com/geekshootjack/fcmp) JSON report (`unique_in_a` / `unique_in_b`, plus `frame_mismatches` in proxy-frames mode).
 
+Depth values are relative to the footage root recorded in the report (the `group_a`/`group_b` directories fcmp was run against). Files sitting directly at that root are too shallow to group — pxygen lists them in a warning and skips them.
+
 ```sh
 pxygen -i fcmp_report.json -o /Volumes/SSD/Proxy -g a -n 1 -d 2
 ```
