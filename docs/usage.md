@@ -70,12 +70,12 @@ So `-n 1 -d 2` means: group by Day, include camera reels as subfolders.
 **Interactive selection example:**
 
 ```
-文件夹(3 个):
+文件夹 (3 个):
   1  Shooting_Day_1
   2  Shooting_Day_2
   3  Shooting_Day_3
 
-输入编号如 '1 3 8',范围如 2-4,'all' 全选,'q' 退出
+输入编号如 '1 3 8', 范围如 2-4, 'all' 全选, 'q' 退出
 > 1 3
 ```
 
@@ -87,6 +87,16 @@ already-queued jobs stay in the saved Resolve project.
 | Flag | Default | Description |
 |------|---------|-------------|
 | `-g, --group {a,b}` | `a` | fcmp side to render: a = `unique_in_a`, b = `unique_in_b` |
+
+### Language
+
+User-facing output is Chinese by default. Set the `PXYGEN_LANG` environment
+variable to `en` for English (diagnostic logs are always English):
+
+```sh
+PXYGEN_LANG=en pxygen -i ... -o ...    # POSIX
+$env:PXYGEN_LANG = 'en'; pxygen ...    # PowerShell
+```
 
 ### Render Options
 

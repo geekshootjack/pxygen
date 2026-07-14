@@ -478,7 +478,7 @@ class TestProcessDirectoryMode:
         assert "目录模式" in output_text
         assert "素材" in output_text
         assert "代理" in output_text
-        assert "文件夹(2 个):" in output_text
+        assert "文件夹 (2 个):" in output_text
         # leaf names only — the common path prefix is not repeated per row
         assert "  1  Day1" in output_text
         assert "  2  Day2" in output_text

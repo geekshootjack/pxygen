@@ -462,7 +462,7 @@ class TestProcessFilesInResolve:
         )
 
         output_text = "\n".join(output_lines)
-        assert "正在处理 Day1(1/1)" in output_text
+        assert "正在处理 Day1 (1/1)" in output_text
         assert "渲染任务:" in output_text
         assert "4096x2160" in output_text
         # actual channel counts, not standard/multi-audio labels
@@ -621,7 +621,7 @@ class TestProcessFilesInResolve:
         assert project.render_job_count == 1
         output_text = "\n".join(output_lines)
         assert "正在启动" in output_text
-        assert "Resolve 已就绪。" in output_text
+        assert "Resolve 已就绪" in output_text
 
     def test_no_launch_when_probe_succeeds_immediately(self, monkeypatch):
         items = ["/source/a.mov"]

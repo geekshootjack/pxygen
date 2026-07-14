@@ -221,4 +221,4 @@ class TestDispatch:
         ), patch(_MOCK_JSON, side_effect=AttributeError("boom")), caplog.at_level(logging.ERROR):
             with pytest.raises(SystemExit):
                 main()
-        assert "Resolve API 错误:boom" in caplog.text
+        assert "Resolve API 错误: boom" in caplog.text

@@ -12,6 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from .i18n import _
 from .organize import (
     describe_folders_at_in_depth,
     filter_folders_at_in_depth,
@@ -38,7 +39,7 @@ class _DepthSpec:
 def _normalize_depth(root_depth: int, depth: int) -> _DepthSpec:
     """Interpret *depth* as a level relative to the input root."""
     if depth < 0:
-        raise ValueError("深度值 (-n/-d) 必须 ≥ 0")
+        raise ValueError(_("深度值 (-n/-d) 必须 ≥ 0"))
     resolved = root_depth + depth if root_depth > 0 else depth
     return _DepthSpec(requested=depth, resolved=resolved)
 
@@ -55,17 +56,18 @@ def _folder_labels(paths: list[str]) -> list[str]:
     return names
 
 
-_SELECTION_HINT = "\n输入编号如 '1 3 8',范围如 2-4,'all' 全选,'q' 退出"
+def _selection_hint() -> str:
+    return "\n" + _("输入编号如 '1 3 8', 范围如 2-4, 'all' 全选, 'q' 退出")
 
 
 def _print_folder_options(options, output: OutputFn) -> None:
     labels = _folder_labels([option.full_path for option in options])
     items = [
-        f"{label}  ({option.item_count} 项)"
+        label + "  " + _("({} 项)").format(option.item_count)
         for label, option in zip(labels, options)
     ]
-    output_numbered(f"文件夹({len(options)} 个):", items, output)
-    output(_SELECTION_HINT)
+    output_numbered(_("文件夹 ({} 个):").format(len(options)), items, output)
+    output(_selection_hint())
 
 
 def _read_selection_indices(
@@ -169,18 +171,20 @@ def process_json_mode(
     )
 
     if side not in ("a", "b"):
-        raise PxygenError(f"无效的 side 值 '{side}',必须是 'a' 或 'b'。")
+        raise PxygenError(_("无效的 side 值 '{}', 必须是 'a' 或 'b'").format(side))
 
     try:
         comparison_data: dict = json.loads(Path(json_path).read_text(encoding="utf-8"))
     except Exception as exc:
-        raise PxygenError(f"读取 JSON 文件失败:{exc}") from exc
+        raise PxygenError(_("读取 JSON 文件失败: {}").format(exc)) from exc
     logger.debug("Loaded comparison JSON from %s", json_path)
 
     if "files_only_in_group1" in comparison_data or "files_only_in_group2" in comparison_data:
         raise PxygenError(
-            "这是旧版 File_Compare 报告;pxygen 只支持 fcmp 的 JSON 报告"
-            "(unique_in_a / unique_in_b),请用 fcmp 重新比对。"
+            _(
+                "这是旧版 File_Compare 报告; pxygen 只支持 fcmp 的 JSON 报告"
+                " (unique_in_a / unique_in_b), 请用 fcmp 重新比对"
+            )
         )
 
     file_list: list[str] = list(comparison_data.get(f"unique_in_{side}", []))
@@ -190,7 +194,11 @@ def process_json_mode(
         path_key = f"path_{side}"
         mismatch_files = [m[path_key] for m in comparison_data["frame_mismatches"]]
         file_list.extend(mismatch_files)
-        output(f"已从 frame_mismatches 追加 {len(mismatch_files)} 个文件(side {side})")
+        output(
+            _("已从 frame_mismatches 追加 {} 个文件 (side {})").format(
+                len(mismatch_files), side
+            )
+        )
         logger.info(
             "Added %d frame-mismatch file(s) for side %s",
             len(mismatch_files),
@@ -198,12 +206,12 @@ def process_json_mode(
         )
 
     if not file_list:
-        raise PxygenError(f"unique_in_{side} 中没有文件")
+        raise PxygenError(_("unique_in_{} 中没有文件").format(side))
 
     if in_depth < 0 or out_depth < 0:
-        raise ValueError("深度值 (-n/-d) 必须 ≥ 0")
+        raise ValueError(_("深度值 (-n/-d) 必须 ≥ 0"))
     if out_depth < in_depth:
-        raise ValueError("输出深度 (-d) 必须 ≥ 输入深度 (-n)")
+        raise ValueError(_("输出深度 (-d) 必须 ≥ 输入深度 (-n)"))
 
     group_key = f"group_{side}"
     root_dirs: list[str] = [
@@ -212,8 +220,9 @@ def process_json_mode(
     ]
     if not root_dirs:
         raise PxygenError(
-            f"报告中没有素材根目录({group_key}.directories 缺失或为空),"
-            "请用 fcmp 重新比对。"
+            _(
+                "报告中没有素材根目录 ({}.directories 缺失或为空), 请用 fcmp 重新比对"
+            ).format(group_key)
         )
 
     # Longest root first so a file under nested roots matches the deepest one.
@@ -239,11 +248,11 @@ def process_json_mode(
 
     logger.info("Found %d file(s) in unique_in_%s", len(file_list), side)
     summary_rows: list[tuple[str, object]] = [
-        ("报告文件", json_path),
-        ("比对侧", f"unique_in_{side}"),
-        ("素材根目录", ", ".join(root_dirs)),
-        ("深度", f"-n {in_depth} / -d {out_depth}"),
-        ("文件数", len(file_list)),
+        (_("报告文件"), json_path),
+        (_("比对侧"), f"unique_in_{side}"),
+        (_("素材根目录"), ", ".join(root_dirs)),
+        (_("深度"), f"-n {in_depth} / -d {out_depth}"),
+        (_("文件数"), len(file_list)),
     ]
     example_root = next(iter(files_by_root), None)
     if example_root is not None:
@@ -253,17 +262,17 @@ def process_json_mode(
         if in_depth == out_depth:
             summary_rows.extend(
                 [
-                    ("示例", example),
-                    ("分组文件夹", parts[key_end - 1]),
+                    (_("示例"), example),
+                    (_("分组文件夹"), parts[key_end - 1]),
                 ]
             )
         else:
             fragment_parts = parts[key_end - 1:len(example_root) + out_depth]
             summary_rows.extend(
                 [
-                    ("示例", example),
+                    (_("示例"), example),
                     (
-                        "分组片段",
+                        _("分组片段"),
                         format_path_parts(
                             fragment_parts,
                             windows=":" in example[:3] or "\\" in example,
@@ -271,19 +280,19 @@ def process_json_mode(
                     ),
                 ]
             )
-    output_kv("JSON 模式", summary_rows, output)
+    output_kv(_("JSON 模式"), summary_rows, output)
 
     skipped_groups = [
-        (f"不在 {group_key} 目录之下", unmatched_files),
+        (_("不在 {} 目录之下").format(group_key), unmatched_files),
         (
-            f"距素材根目录不足 {in_depth} 层,无法按 -n {in_depth} 分组",
+            _("距素材根目录不足 {} 层, 无法按 -n {} 分组").format(in_depth, in_depth),
             shallow_files,
         ),
     ]
     for reason, skipped in skipped_groups:
         if not skipped:
             continue
-        output(f"\n警告:跳过 {len(skipped)} 个文件({reason}):")
+        output("\n" + _("警告: 跳过 {} 个文件 ({}):").format(len(skipped), reason))
         for file_path in skipped:
             output(f"  {file_path}")
         # info, not warning — the output() lines above already surface this
@@ -302,7 +311,7 @@ def process_json_mode(
             )
         )
     if not organized:
-        raise PxygenError("没有文件能归入素材根目录之下的分组。")
+        raise PxygenError(_("没有文件能归入素材根目录之下的分组"))
     logger.debug("JSON mode produced %d top-level folder group(s)", len(organized))
     if filter_mode == "select":
         options = describe_folders_at_in_depth(organized)
@@ -317,8 +326,8 @@ def process_json_mode(
         organized = filter_folders_at_in_depth(organized, filter_list)
         if not organized:
             available = ", ".join(sorted(path_name(k) for k in organized_before_filter))
-            output(f"\n警告:筛选无匹配文件夹:{' '.join(filter_list)}")
-            output(f"可选文件夹:{available}")
+            output("\n" + _("警告: 筛选无匹配文件夹: {}").format(" ".join(filter_list)))
+            output(_("可选文件夹: {}").format(available))
             logger.warning(
                 "No matching folders found for filter %r (available: %s)",
                 filter_list,
@@ -328,7 +337,7 @@ def process_json_mode(
             logger.debug("JSON mode filter %r kept %d folder group(s)", filter_list, len(organized))
 
     if not organized:
-        raise PxygenError("筛选后没有可处理的文件夹。")
+        raise PxygenError(_("筛选后没有可处理的文件夹"))
 
     plan = build_resolve_execution_plan(
         organized,
@@ -381,12 +390,12 @@ def process_directory_mode(
 
     footage_dir = Path(footage_path)
     if not footage_dir.exists():
-        raise PxygenError(f"素材文件夹不存在:{footage_path}")
+        raise PxygenError(_("素材文件夹不存在: {}").format(footage_path))
     footage_depth = len(path_parts(footage_path))
     in_depth_spec = _normalize_depth(footage_depth, in_depth)
     out_depth_spec = _normalize_depth(footage_depth, out_depth)
     if out_depth_spec.resolved < in_depth_spec.resolved:
-        raise ValueError("输出深度 (-d) 必须 ≥ 输入深度 (-n)")
+        raise ValueError(_("输出深度 (-d) 必须 ≥ 输入深度 (-n)"))
     # --- Walk to find all folders at exactly in_depth ---
     input_depth_folders = [
         str(path) for path in _collect_directories_at_depth(footage_dir, in_depth_spec.resolved)
@@ -405,16 +414,16 @@ def process_directory_mode(
 
     if not input_depth_folders:
         raise PxygenError(
-            f"'{footage_path}' 之下深度 {in_depth} 处没有文件夹"
+            _("'{}' 之下深度 {} 处没有文件夹").format(footage_path, in_depth)
         )
 
     output_kv(
-        "目录模式",
+        _("目录模式"),
         [
-            ("素材", f"{footage_path}(深度 {footage_depth})"),
-            ("代理", proxy_path),
-            ("深度", f"-n {in_depth_spec.requested} / -d {out_depth_spec.requested}"),
-            ("文件夹数", len(input_depth_folders)),
+            (_("素材"), _("{} (深度 {})").format(footage_path, footage_depth)),
+            (_("代理"), proxy_path),
+            (_("深度"), f"-n {in_depth_spec.requested} / -d {out_depth_spec.requested}"),
+            (_("文件夹数"), len(input_depth_folders)),
         ],
         output,
     )
@@ -460,9 +469,11 @@ def process_directory_mode(
     if filter_mode == "select":
         folder_paths = sorted(targets_by_input)
         output_numbered(
-            f"文件夹({len(folder_paths)} 个):", _folder_labels(folder_paths), output
+            _("文件夹 ({} 个):").format(len(folder_paths)),
+            _folder_labels(folder_paths),
+            output,
         )
-        output(_SELECTION_HINT)
+        output(_selection_hint())
         choice = prompt_line(input_func)
         if choice.lower() == "all":
             selected_indices = None
@@ -488,19 +499,20 @@ def process_directory_mode(
                 ", ".join(available),
             )
             raise PxygenError(
-                f"筛选无匹配文件夹:{' '.join(filter_names)}"
-                f"(可选:{', '.join(available)})"
+                _("筛选无匹配文件夹: {} (可选: {})").format(
+                    " ".join(filter_names), ", ".join(available)
+                )
             )
         targets_by_input = filtered
         logger.debug("Directory mode filter %r kept %d input folder(s)", filter_list, len(filtered))
 
     if not targets_by_input:
-        raise PxygenError("筛选后没有可处理的文件夹。")
+        raise PxygenError(_("筛选后没有可处理的文件夹"))
 
     all_target_folders: list[str] = [
         folder for targets in targets_by_input.values() for folder in targets
     ]
-    output(f"\n共处理 {len(all_target_folders)} 个文件夹")
+    output("\n" + _("共处理 {} 个文件夹").format(len(all_target_folders)))
     logger.info("Total folders to process: %d", len(all_target_folders))
 
     if in_depth_spec.resolved == out_depth_spec.resolved:

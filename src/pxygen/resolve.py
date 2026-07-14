@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from .i18n import _
 from .paths import path_name
 from .plan import ResolveExecutionPlan
 from .presenter import (
@@ -176,8 +177,10 @@ def _setup_resolve_env() -> None:
             return
 
     raise PxygenError(
-        "找不到 DaVinci Resolve 脚本模块。请手动设置 RESOLVE_SCRIPT_API 和"
-        " RESOLVE_SCRIPT_LIB —— 参见 README.md 的 Environment Setup 一节。"
+        _(
+            "找不到 DaVinci Resolve 脚本模块. 请手动设置 RESOLVE_SCRIPT_API 和"
+            " RESOLVE_SCRIPT_LIB — 参见 README.md 的 Environment Setup 一节"
+        )
     )
 
 
@@ -253,29 +256,35 @@ def _ensure_resolve_ready(output: OutputFn) -> None:
     executable = _resolve_executable()
     if executable is None:
         raise PxygenError(
-            "无法连接 DaVinci Resolve,也找不到它的可执行文件来启动。"
-            "请手动启动 Resolve,并确认 Preferences → System → General 里"
-            " 'External scripting using' 设为 Local。"
+            _(
+                "无法连接 DaVinci Resolve, 也找不到它的可执行文件来启动."
+                " 请手动启动 Resolve, 并确认 Preferences → System → General 里"
+                " 'External scripting using' 设为 Local"
+            )
         )
-    output("Resolve 未运行,正在启动...")
+    output(_("Resolve 未运行, 正在启动..."))
     logger.info("Launching Resolve from %s", executable)
     try:
         _launch_resolve(executable)
     except OSError as exc:
-        raise PxygenError(f"启动 Resolve 失败:{exc}") from exc
+        raise PxygenError(_("启动 Resolve 失败: {}").format(exc)) from exc
     output(
-        f"  等待 Resolve 接受脚本连接(最多 {_RESOLVE_LAUNCH_TIMEOUT_SECONDS} 秒)..."
+        "  " + _("等待 Resolve 接受脚本连接 (最多 {} 秒)...").format(
+            _RESOLVE_LAUNCH_TIMEOUT_SECONDS
+        )
     )
     deadline = time.monotonic() + _RESOLVE_LAUNCH_TIMEOUT_SECONDS
     while time.monotonic() < deadline:
         time.sleep(_RESOLVE_POLL_INTERVAL_SECONDS)
         if _probe_resolve_connection():
-            output("  Resolve 已就绪。")
+            output("  " + _("Resolve 已就绪"))
             return
     raise PxygenError(
-        f"Resolve 启动后 {_RESOLVE_LAUNCH_TIMEOUT_SECONDS} 秒内未接受脚本连接。"
-        "请确认 Preferences → System → General 里 'External scripting using'"
-        " 设为 Local,然后重新运行 pxygen。"
+        _(
+            "Resolve 启动后 {} 秒内未接受脚本连接. 请确认 Preferences →"
+            " System → General 里 'External scripting using' 设为 Local,"
+            " 然后重新运行 pxygen"
+        ).format(_RESOLVE_LAUNCH_TIMEOUT_SECONDS)
     )
 
 
@@ -306,9 +315,11 @@ def _connect_to_resolve(project_prefix: str, output: OutputFn) -> _ResolveContex
     resolve = dvr_script.scriptapp("Resolve")
     if resolve is None:
         raise PxygenError(
-            "无法连接 DaVinci Resolve。请确认 Resolve 正在运行,且"
-            " Preferences → System → General 里 'External scripting using'"
-            " 设为 Local。"
+            _(
+                "无法连接 DaVinci Resolve. 请确认 Resolve 正在运行, 且"
+                " Preferences → System → General 里 'External scripting using'"
+                " 设为 Local"
+            )
         )
 
     project_manager = resolve.GetProjectManager()
@@ -334,8 +345,10 @@ def _ensure_resolve_alive(context: _ResolveContext) -> None:
         alive = False
     if not alive:
         raise PxygenError(
-            "与 DaVinci Resolve 的连接已断开——它可能崩溃了。"
-            "请重启 Resolve 并重新运行 pxygen 处理剩余文件夹。"
+            _(
+                "与 DaVinci Resolve 的连接已断开 — 它可能崩溃了."
+                " 请重启 Resolve 并重新运行 pxygen 处理剩余文件夹"
+            )
         )
 
 
@@ -435,7 +448,7 @@ def _import_items(
             _ensure_resolve_alive(context)
             logger.warning("Import returned no clips for %s", item)
         if total > 1:
-            output(f"    已导入 {index}/{total}  {path_name(item)}")
+            output("    " + _("已导入 {}/{}  {}").format(index, total, path_name(item)))
     return imported
 
 
@@ -461,12 +474,12 @@ def _add_render_job(
     proxy_width, proxy_height = calculate_proxy_dimensions(resolution_str)
     timeline = media_pool.CreateTimelineFromClips(timeline_name, clips)
     if timeline is None:
-        raise PxygenError(f"无法从素材创建时间线 {timeline_name!r}。")
+        raise PxygenError(_("无法从素材创建时间线 {!r}").format(timeline_name))
     logger.debug("Created timeline %r from %d clip(s)", timeline_name, len(clips))
 
     if hasattr(project, "SetCurrentTimeline"):
         if not project.SetCurrentTimeline(timeline):
-            raise PxygenError(f"无法切换当前时间线到 {timeline_name!r}。")
+            raise PxygenError(_("无法切换当前时间线到 {!r}").format(timeline_name))
         logger.debug("Set current timeline to %r before queueing render job", timeline_name)
 
     timeline_settings = {
@@ -477,16 +490,18 @@ def _add_render_job(
     for setting_name, setting_value in timeline_settings.items():
         if not timeline.SetSetting(setting_name, setting_value):
             raise PxygenError(
-                f"无法将时间线 {timeline_name!r} 的设置 {setting_name!r}"
-                f" 设为 {setting_value!r}。"
+                _("无法将时间线 {!r} 的设置 {!r} 设为 {!r}").format(
+                    timeline_name, setting_name, setting_value
+                )
             )
     if hasattr(timeline, "GetSetting"):
         for setting_name, setting_value in timeline_settings.items():
             actual_value = timeline.GetSetting(setting_name)
             if actual_value != setting_value:
                 raise PxygenError(
-                    f"时间线 {timeline_name!r} 的设置 {setting_name!r} 未生效"
-                    f"(期望 {setting_value!r},实际 {actual_value!r})。"
+                    _("时间线 {!r} 的设置 {!r} 未生效 (期望 {!r}, 实际 {!r})").format(
+                        timeline_name, setting_name, setting_value, actual_value
+                    )
                 )
     project.LoadRenderPreset(render_preset)
     project.SetRenderSettings(
@@ -581,12 +596,12 @@ def _queue_render_jobs_for_bin(
         for clip_group in clip_groups
     ]
     if jobs:
-        output("  渲染任务:")
+        output("  " + _("渲染任务:"))
         rows = [
             (
                 clip_group.resolution,
                 "/".join(str(c) for c in clip_group.audio_channels) + "ch",
-                f"{len(clip_group.clips)} 个片段",
+                _("{} 个片段").format(len(clip_group.clips)),
                 render_preset,
             )
             for clip_group, render_preset in jobs
@@ -651,8 +666,9 @@ def execute_resolve_plan(
     total_folders = len(plan.footage_folders)
     for folder_index, footage_folder in enumerate(plan.footage_folders, 1):
         output(
-            f"\n正在处理 {footage_folder.footage_folder_name}"
-            f"({folder_index}/{total_folders})"
+            "\n" + _("正在处理 {} ({}/{})").format(
+                footage_folder.footage_folder_name, folder_index, total_folders
+            )
         )
         logger.info("Processing footage folder %s", footage_folder.footage_folder_name)
         _ensure_resolve_alive(context)
@@ -662,8 +678,9 @@ def execute_resolve_plan(
         if main_bin is None:
             _ensure_resolve_alive(context)
             raise PxygenError(
-                f"Resolve 无法创建媒体池 bin"
-                f" {footage_folder.footage_folder_name!r}。"
+                _("Resolve 无法创建媒体池 bin {!r}").format(
+                    footage_folder.footage_folder_name
+                )
             )
 
         for batch in footage_folder.batches:
@@ -680,7 +697,9 @@ def execute_resolve_plan(
                     continue
 
                 output(
-                    f"  正在导入 {len(items_to_import)} 项到 Resolve(可能需要一些时间)..."
+                    "  " + _("正在导入 {} 项到 Resolve (可能需要一些时间)...").format(
+                        len(items_to_import)
+                    )
                 )
                 imported_clips = _import_items(context, items_to_import, output)
                 if not imported_clips:
@@ -735,20 +754,22 @@ def execute_resolve_plan(
 
     logger.info("Saved Resolve project")
     should_start_render = confirm_render or (
-        lambda: presenter.confirm("\n所有渲染任务已添加,现在开始渲染?(y/n/q)")
+        lambda: presenter.confirm(
+            "\n" + _("所有渲染任务已添加, 现在开始渲染? (y/n/q)")
+        )
     )
     try:
         start_render = should_start_render()
     except UserAbort:
         raise UserAbort(
-            "已中止——渲染任务仍保留在已保存的 Resolve 项目中。"
+            _("已中止 — 渲染任务仍保留在已保存的 Resolve 项目中")
         ) from None
     if start_render:
         context.project.StartRendering()
         logger.info("Started Resolve rendering")
-        output("渲染已开始。")
+        output(_("渲染已开始"))
     else:
         logger.info("Render jobs queued; waiting for manual start in Resolve")
-        output("项目已保存,请在 DaVinci Resolve 中手动开始渲染。")
+        output(_("项目已保存, 请在 DaVinci Resolve 中手动开始渲染"))
 
 
