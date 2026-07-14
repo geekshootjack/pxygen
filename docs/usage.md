@@ -70,12 +70,12 @@ So `-n 1 -d 2` means: group by Day, include camera reels as subfolders.
 **Interactive selection example:**
 
 ```
-Folders (3):
+文件夹(3 个):
   1  Shooting_Day_1
   2  Shooting_Day_2
   3  Shooting_Day_3
 
-Numbers like '1 3 8', range like 2-4, 'all', or 'q' to quit
+输入编号如 '1 3 8',范围如 2-4,'all' 全选,'q' 退出
 > 1 3
 ```
 

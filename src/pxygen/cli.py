@@ -50,12 +50,11 @@ def _build_parser():
         prog="pxygen",
         description=(
             f"pxygen v{__version__}\n\n"
-            "Pass a footage folder or a JSON comparison file to --input;\n"
-            "the mode is detected automatically."
+            "把素材文件夹或 fcmp JSON 报告传给 --input,自动识别模式。"
         ),
         formatter_class=_Formatter,
         epilog=(
-            "Examples:\n"
+            "示例:\n"
             "  pxygen -i /Volumes/SSD/Footage -o /Volumes/SSD/Proxy\n"
             "  pxygen -i fcmp_report.json -o /Volumes/SSD/Proxy --group b\n"
             "  pxygen -i /Volumes/SSD/Footage -o /Proxy --select\n"
@@ -67,49 +66,49 @@ def _build_parser():
         "-v", "-V", "--version",
         action="version", version=f"pxygen v{__version__}",
     )
-    parser.add_argument("-i", "--input", help="Footage folder or JSON comparison file")
-    parser.add_argument("-o", "--output", help="Proxy output folder")
+    parser.add_argument("-i", "--input", help="素材文件夹或 fcmp JSON 报告")
+    parser.add_argument("-o", "--output", help="代理输出文件夹")
     parser.add_argument(
         "-n", "--in-depth",
         type=int, default=default_depth,
-        help="Levels below the input folder to treat as one footage group",
+        help="输入文件夹之下第几层作为一个素材分组",
     )
     parser.add_argument(
         "-d", "--out-depth",
         type=int, default=default_depth,
-        help="Levels below the input folder to preserve as subfolders",
+        help="输入文件夹之下第几层保留为子文件夹",
     )
     parser.add_argument(
         "-g", "--group",
         choices=["a", "b"], default="a",
-        help="JSON mode: fcmp side to render (a = unique_in_a, b = unique_in_b)",
+        help="JSON 模式:渲染 fcmp 的哪一侧(a = unique_in_a,b = unique_in_b)",
     )
 
     selection_group = parser.add_mutually_exclusive_group()
     selection_group.add_argument(
         "-s", "--select", action="store_true",
-        help="Interactively select which folders to process",
+        help="交互式选择要处理的文件夹",
     )
     selection_group.add_argument(
         "-f", "--filter", nargs="+", metavar="NAME",
-        help="Folder names to process (e.g. Day1 Day2)",
+        help="只处理指定名称的文件夹(如 Day1 Day2)",
     )
 
     parser.add_argument(
         "-k", "--codec",
         choices=["auto", "prores", "h265", "hevc", "265"],
         default="auto",
-        help="Render codec (h265 for ≤4 audio ch, ProRes otherwise)",
+        help="渲染编码(≤4 音轨用 h265,更多音轨用 ProRes)",
     )
     parser.add_argument(
         "--log-level",
         choices=["debug", "info", "warning", "error"],
         default="warning",
-        help="Logging verbosity",
+        help="日志详细程度",
     )
     parser.add_argument(
         "--log-file",
-        help="Optional file path for detailed runtime logs",
+        help="可选:详细运行日志的输出文件路径",
     )
 
     return parser
@@ -131,7 +130,7 @@ def main() -> None:
         input_func=presenter.read_line,
         output=presenter.show,
         confirm_render=lambda: presenter.confirm(
-            "\nAll render jobs added. Start rendering now? (y/n)"
+            "\n所有渲染任务已添加,现在开始渲染?(y/n)"
         ),
     )
 
@@ -140,7 +139,7 @@ def main() -> None:
             parser.print_help()
             sys.exit(1)
         if not args.output:
-            parser.error("requires -o/--output")
+            parser.error("缺少 -o/--output 输出目录")
         input_path = clean_path_input(args.input)
         output_path = clean_path_input(args.output)
         if is_json_file(input_path):
@@ -157,7 +156,7 @@ def main() -> None:
             )
 
     except UserAbort as exc:
-        presenter.show(str(exc) or "Aborted.")
+        presenter.show(str(exc) or "已中止。")
         sys.exit(0)
     except PxygenError as exc:
         logger.error("%s", exc)
@@ -167,11 +166,11 @@ def main() -> None:
         sys.exit(1)
     except AttributeError as exc:
         # Typically: Resolve API returned None (Resolve not running or API call failed)
-        logger.error("Resolve API error: %s", exc)
-        logger.error("Make sure DaVinci Resolve is running.")
+        logger.error("Resolve API 错误:%s", exc)
+        logger.error("请确认 DaVinci Resolve 正在运行。")
         sys.exit(1)
     except KeyboardInterrupt:
-        logger.error("Aborted.")
+        logger.error("已中止。")
         sys.exit(1)
 
 

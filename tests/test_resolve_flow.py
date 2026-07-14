@@ -462,8 +462,8 @@ class TestProcessFilesInResolve:
         )
 
         output_text = "\n".join(output_lines)
-        assert "Processing Day1 (1/1)" in output_text
-        assert "Render jobs:" in output_text
+        assert "正在处理 Day1(1/1)" in output_text
+        assert "渲染任务:" in output_text
         assert "4096x2160" in output_text
         # actual channel counts, not standard/multi-audio labels
         assert "2ch" in output_text
@@ -572,9 +572,9 @@ class TestProcessFilesInResolve:
         assert project.render_job_count == 1
         assert len(media_pool.timelines[0].clips) == 3
         output_text = "\n".join(output_lines)
-        assert "imported 1/3  a.mov" in output_text
-        assert "imported 2/3  b.mov" in output_text
-        assert "imported 3/3  c.mov" in output_text
+        assert "已导入 1/3  a.mov" in output_text
+        assert "已导入 2/3  b.mov" in output_text
+        assert "已导入 3/3  c.mov" in output_text
 
     def _fresh_load_setup(self, monkeypatch, imports):
         """Simulate a first-time fusionscript load with the fake module."""
@@ -620,8 +620,8 @@ class TestProcessFilesInResolve:
         assert launched == [Path("/fake/Resolve.exe")]
         assert project.render_job_count == 1
         output_text = "\n".join(output_lines)
-        assert "launching it" in output_text
-        assert "Resolve is up." in output_text
+        assert "正在启动" in output_text
+        assert "Resolve 已就绪。" in output_text
 
     def test_no_launch_when_probe_succeeds_immediately(self, monkeypatch):
         items = ["/source/a.mov"]
@@ -651,7 +651,7 @@ class TestProcessFilesInResolve:
         monkeypatch.setattr("pxygen.resolve._probe_resolve_connection", lambda: False)
         monkeypatch.setattr("pxygen.resolve._resolve_executable", lambda: None)
 
-        with pytest.raises(PxygenError, match="could not locate"):
+        with pytest.raises(PxygenError, match="找不到它的可执行文件"):
             _process(
                 {"/footage/Day1": {"CamA": ["/source/a.mov"]}},
                 ["/footage/Day1"],
@@ -673,7 +673,7 @@ class TestProcessFilesInResolve:
         )
         monkeypatch.setattr("pxygen.resolve._RESOLVE_LAUNCH_TIMEOUT_SECONDS", 0)
 
-        with pytest.raises(PxygenError, match="did not accept"):
+        with pytest.raises(PxygenError, match="未接受脚本连接"):
             _process(
                 {"/footage/Day1": {"CamA": ["/source/a.mov"]}},
                 ["/footage/Day1"],
@@ -690,7 +690,7 @@ class TestProcessFilesInResolve:
         project_manager, project, _ = _install_fake_resolve(monkeypatch, imports)
 
         monkeypatch.setattr("builtins.input", lambda *_: "q")
-        with pytest.raises(UserAbort, match="remain queued"):
+        with pytest.raises(UserAbort, match="仍保留在已保存的"):
             _process(
                 {"/footage/Day1": {"CamA": items}},
                 ["/footage/Day1"],
@@ -709,7 +709,7 @@ class TestProcessFilesInResolve:
         # Simulate a crashed Resolve: remote attribute lookups return None
         project.GetName = lambda: None
 
-        with pytest.raises(PxygenError, match="Lost connection"):
+        with pytest.raises(PxygenError, match="连接已断开"):
             _process(
                 {"/footage/Day1": {"CamA": items}},
                 ["/footage/Day1"],

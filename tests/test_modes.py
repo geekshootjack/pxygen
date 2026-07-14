@@ -106,7 +106,7 @@ class TestProcessJsonMode:
             encoding="utf-8",
         )
 
-        with pytest.raises(PxygenError, match="No folders to process after filtering"):
+        with pytest.raises(PxygenError, match="筛选后没有可处理的文件夹"):
             process_json_mode(
                 str(json_path),
                 "/proxy",
@@ -143,9 +143,9 @@ class TestProcessJsonMode:
             )
 
         output_text = "\n".join(output_lines)
-        assert "JSON mode" in output_text
+        assert "JSON 模式" in output_text
         assert "unique_in_a" in output_text
-        assert "files" in output_text
+        assert "文件数" in output_text
 
     def test_parses_golden_fcmp_report_fixture(self):
         """Contract test against a real fcmp-generated report.
@@ -181,7 +181,7 @@ class TestProcessJsonMode:
             encoding="utf-8",
         )
 
-        with pytest.raises(PxygenError, match="legacy File_Compare"):
+        with pytest.raises(PxygenError, match="File_Compare"):
             process_json_mode(str(json_path), "/proxy", "a", 1, 2)
 
     def test_defaults_to_console_output_instead_of_logger_info(self, tmp_path):
@@ -307,7 +307,7 @@ class TestProcessJsonMode:
         plan = mock_execute.call_args.args[0]
         assert [folder.footage_folder_name for folder in plan.footage_folders] == ["Day1"]
         output_text = "\n".join(output_lines)
-        assert "Warning" in output_text
+        assert "警告" in output_text
         assert "/Volumes/SSD/Footage/loose.mov" in output_text
         assert "/Elsewhere/orphan.mov" in output_text
 
@@ -475,10 +475,10 @@ class TestProcessDirectoryMode:
             )
 
         output_text = "\n".join(output_lines)
-        assert "Directory mode" in output_text
-        assert "footage" in output_text
-        assert "proxy" in output_text
-        assert "Folders (2):" in output_text
+        assert "目录模式" in output_text
+        assert "素材" in output_text
+        assert "代理" in output_text
+        assert "文件夹(2 个):" in output_text
         # leaf names only — the common path prefix is not repeated per row
         assert "  1  Day1" in output_text
         assert "  2  Day2" in output_text
