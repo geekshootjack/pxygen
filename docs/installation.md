@@ -94,3 +94,7 @@ Presets only need re-importing when they change (the Releases notes will say so)
   start, or external scripting is disabled (step 5 above)
 - **Proxies render without burn-ins** — the `burn-in-vertical` preset was not
   imported (a warning appears in the log)
+- **"Distribution not found at: file:///..." when installing a wheel** — the
+  wheel's path contains `#` (common in our drive/card names like `DIT-2T#7`),
+  which uv's `file://` URL parsing treats as a fragment separator. Copy the
+  wheel to a `#`-free path first (e.g. `~/Downloads/`) and install from there
